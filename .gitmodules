@@ -1,0 +1,4 @@
+[submodule "NEMO-Corpus"]
+	path = NEMO-Corpus
+	url = https://github.com/OnlpLab/NEMO-Corpus.git
+	branch = main
