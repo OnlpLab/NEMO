@@ -1,4 +1,4 @@
-# 🐠 NEMO² - Neural Modeling for (Hebrew) Named Entities and Morphology
+# 🐠 NEMO<sup>2</sup> - Neural Modeling for (Hebrew) Named Entities and Morphology
 ## Introduction
 
 ## Main Features
@@ -40,7 +40,7 @@
 
 ## Citations
 
-If you use NEMO² or the NEMO corpus, please cite the NEMO² paper:
+If you use NEMO<sup>2</sup> or the NEMO corpus, please cite the NEMO<sup>2</sup> paper:
 ```bibtex
 @article{DBLP:journals/corr/abs-2007-15620,
   author    = {Dan Bareket and
