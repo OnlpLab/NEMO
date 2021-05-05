@@ -1,6 +1,7 @@
 import os
 import datetime
 import bclm
+import pandas as pd
 import subprocess
 import sys
 import networkx as nx
@@ -51,7 +52,7 @@ def write_ncrf_conf(conf_path, input_path, output_path, model, dset):
 
 
 def get_biose_count(path, sent_id_shift=1):
-    sents = nem.read_file_sents(path, fix_multi_tag=False, sent_id_shift=sent_id_shift)
+    sents = read_file_sents(path, fix_multi_tag=False, sent_id_shift=sent_id_shift)
     bc = []
     for i, sent in sents.iteritems():
         for j, (tok, bio) in enumerate(sent):
@@ -104,7 +105,44 @@ def prune_lattices(lattices_path, ner_pred_path, output_path, keep_all_if_no_val
     pruned_lat = lat[lat[cols].apply(lambda x: tuple(x), axis=1).isin(valid_edges)]
     to_lattices(pruned_lat, output_path)
     
-            
+
+def soft_merge_bio_labels(multitok_sents, tokmorph_sents, verbose=False):
+    new_sents = []
+    for (i, mt_sent), (sent_id, mor_sent) in zip(multitok_sents.iteritems(), tokmorph_sents.iteritems()):
+        new_sent = []
+        for (form, bio), (token_id, token_str, forms) in zip(mt_sent, mor_sent):
+            forms = forms.split('^')
+            bio = bio.split('^')
+            if len(forms) == len(bio):
+                new_forms = (1, list(zip(forms,bio)))
+            elif len(forms)>len(bio):
+                dif = len(forms) - len(bio)
+                new_forms = (2, list(zip(forms[:dif],['O']*dif)) + list(zip(forms[::-1], bio[::-1]))[::-1])
+                if verbose:
+                    print(new_forms)
+            else:
+                new_forms = (3, list(zip(forms[::-1], bio[::-1]))[::-1])
+                if verbose:
+                    print(new_forms)
+            new_sent.extend(new_forms[1])
+        new_sents.append(new_sent)
+    return new_sents
+
+
+def align_multitok(ner_pred_path, tokens_path, conll_path, map_path, output_path):
+    x = read_file_sents(ner_pred_path, fix_multi_tag=False)
+    prun_yo = bclm.read_yap_output(treebank_set=None, tokens_path=tokens_path, dep_path=conll_path, map_path=map_path)
+    prun_yo = bclm.get_token_df(prun_yo, fields=['form'])
+    prun_sents = bclm.get_sentences_list(prun_yo, fields=['token_id', 'token_str', 'form'])
+    new_sents = soft_merge_bio_labels(x, prun_sents, verbose=False)
+
+    with open(output_path, 'w') as of:
+        for sent in new_sents:
+            for form, bio in sent:
+                of.write(form+' '+bio+'\n')
+            of.write('\n')
+
+
 def run_yap_hebma(tokens_path, output_path, log_path):
     result = subprocess.run([YAP_PATH, 'hebma', '-raw', tokens_path, 
                     '-out', output_path], capture_output=True)
@@ -247,8 +285,47 @@ def multi_to_single(model_name, input_path, output_path):
             if os.path.exists(path):
                 os.remove(path)          
                      
-def run_multi_hybrid(model_name, input_path, output_path):
-    pass
+def run_multi_align_hybrid(model_name, input_path, output_path):
+    temp_tokens_path = os.path.join(LOCAL_TEMP_FOLDER, datetime.datetime.now().strftime('%Y%m%d%H%M%S%f')+'_multi_align_hybrid_'+model_name+'.txt')
+    temp_conf_path = temp_tokens_path.replace('.txt','_ncrf.conf')
+    temp_yap_log_path = temp_tokens_path.replace('.txt','_yap.log')
+    temp_lattices_path = temp_tokens_path.replace('.txt','.lattices')
+    temp_seg_path = temp_tokens_path.replace('.txt','.seg')
+    temp_map_path = temp_tokens_path.replace('.txt','.map')
+    temp_conll_path = temp_tokens_path.replace('.txt','.conll')
+    temp_ncrf_morph_input = temp_tokens_path.replace('.txt', '_yapform.txt')
+    temp_ncrf_log_path = temp_tokens_path.replace('.txt','_ncrf.log')
+    temp_multi_output_path = temp_tokens_path.replace('.txt','_multi.txt')
+    temp_pruned_lattices_path = temp_tokens_path.replace('.txt','_pruned.lattices')
+    try:
+        # read file and tokenize
+        sents = read_text_file(input_path)
+        #write temporary tokens file for yap
+        write_tokens_file(sents, temp_tokens_path, only_tokens=True)
+        #run yap hebma to create ambiguous lattices
+        run_yap_hebma(temp_tokens_path, temp_lattices_path, temp_yap_log_path)
+        #run multi
+        run_ner_model(MULTI_MODEL_FOR_HYBRID, input_path, temp_multi_output_path)
+        #prune lattices
+        prune_lattices(temp_lattices_path, temp_multi_output_path, temp_pruned_lattices_path)
+        #run yap joint on pruned lattices
+        run_yap_joint(temp_pruned_lattices_path, temp_seg_path, temp_map_path, temp_conll_path, temp_yap_log_path)
+        align_multitok(temp_multi_output_path, 
+                   temp_tokens_path, 
+                   temp_conll_path,
+                   temp_map_path,
+                   output_path
+                  )
+    except Exception as e:
+        print(traceback.format_exc())
+    #delete all temp files
+    if DELETE_TEMP_FILES:
+        for path in [temp_tokens_path, temp_conf_path, temp_yap_log_path, temp_lattices_path, 
+                     temp_seg_path, temp_map_path, temp_conll_path,
+                     temp_ncrf_morph_input, temp_ncrf_log_path,
+                     temp_multi_output_path, temp_pruned_lattices_path]:
+            if os.path.exists(path):
+                os.remove(path)    
     
     
 def run_morph_tok(model_name, input_path, output_path):
@@ -283,10 +360,10 @@ if __name__=='__main__':
         run_morph_hybrid(model_name, input_path, output_path)
         
     #run multi model and align hybrid segmented output 
-    if command=='multi_hybrid':
-        run_multi_hybrid(model_name, input_path, output_path)
+    if command=='multi_align_hybrid':
+        run_multi_align_hybrid(model_name, input_path, output_path)
         
     #run morph model on hybrid segmented output and align back with tokens
-    if command=='morph_hybrid_token':
-        run_morph_hybrid_token(model_name, input_path, output_path)
+    if command=='morph_hybrid_align_token':
+        run_morph_hybrid_align_token(model_name, input_path, output_path)
 
