@@ -6,6 +6,7 @@ import subprocess
 import sys
 import networkx as nx
 import traceback
+import re
 
 from config import *
 from ne_evaluate_mentions import fix_multi_biose, read_file_sents
@@ -143,6 +144,81 @@ def align_multitok(ner_pred_path, tokens_path, conll_path, map_path, output_path
             of.write('\n')
 
 
+def get_fixed_for_valid_biose(bio_seq):
+    o_re = re.compile('^O+$') 
+    s_re = re.compile('^O*SO*$|^O*BI*EO*$')
+    b_re = re.compile('^O*BI*$')
+    i_re = re.compile('^I+$')
+    e_re = re.compile('^I*EO*$')
+    if o_re.match(bio_seq):
+        return 'O'
+    if s_re.match(bio_seq):
+        return 'S'
+    if b_re.match(bio_seq):
+        return 'B'
+    if i_re.match(bio_seq):
+        return 'I'
+    if e_re.match(bio_seq):
+        return 'E'
+    raise ValueError
+    
+
+def get_fixed_for_invalid_biose(parts):
+    bio = 'O'
+    if 'S' in parts:
+        bio = 'S'
+    elif 'B' in parts and 'E' in parts:
+        bio='S'
+    elif 'E' in parts:
+        bio = 'E'
+    elif 'B' in parts:
+        bio = 'B'
+    elif 'I' in parts:
+        bio = 'I'
+    return bio
+
+
+
+def validate_biose_sequence(full_bio_seq):
+    valid_bio_re = re.compile('^O*BI*$|^O*BI*EO*$|^I+$|^I*EO*$|^O*SO*$')
+    bio_seq, type_seq = zip(*[('O', None) if b=='O' else b.split('-') for b in full_bio_seq])
+    bio_seq = ''.join(bio_seq)
+    valid_bio = valid_bio_re.match(bio_seq)
+    type_seq = list(filter(lambda x: x is not None, type_seq))
+    type_seq_set = set(type_seq)
+
+    if valid_bio:
+        fixed_bio = get_fixed_for_valid_biose(bio_seq)
+        if fixed_bio!='O':
+            fixed_bio += '-' + type_seq[0]
+            
+    else:
+        #take the first BIOSE tag which is not O:
+        #fixed_bio = list(filter(lambda x: x!='O', full_bio_seq))[0]
+        #rough BIOSE and first category:
+        fixed_bio = get_fixed_for_invalid_biose(bio_seq)
+        if fixed_bio!='O':
+            fixed_bio += '-' + type_seq[0]
+        
+    return valid_bio is not None, len(type_seq_set)<=1, fixed_bio
+
+
+def get_fixed_bio_sequence(full_bio_seq):
+    return validate_biose_sequence(full_bio_seq)[2]
+
+
+def get_fixed_tok(path, orig_sents):
+    x = read_file_sents(path, fix_multi_tag=False)
+    new_sents = []
+    for (i, ner_sent), (sent_id, yap_sent) in zip(x.iteritems(), orig_sents.iteritems()):
+        for (form, bio), (token_id, token_str) in zip(ner_sent, yap_sent):
+            new_sents.append((sent_id, token_id, token_str, form, bio))
+    new_sents = pd.DataFrame(new_sents, columns=['sent_id', 'token_id', 'token_str', 'form', 'bio'])
+    new_toks = bclm.get_token_df(new_sents, fields=['bio'])
+    new_toks['fixed_bio'] = new_toks.bio.apply(lambda x: get_fixed_bio_sequence(tuple(x.split('^'))))
+    return new_toks
+
+
 def run_yap_hebma(tokens_path, output_path, log_path):
     result = subprocess.run([YAP_PATH, 'hebma', '-raw', tokens_path, 
                     '-out', output_path], capture_output=True)
@@ -226,8 +302,13 @@ def run_morph_yap(model_name, input_path, output_path):
                 os.remove(path)
 
                 
-def run_morph_hybrid(model_name, input_path, output_path):
+def run_morph_hybrid(model_name, input_path, output_path, align_tokens=False):
     temp_tokens_path = os.path.join(LOCAL_TEMP_FOLDER, datetime.datetime.now().strftime('%Y%m%d%H%M%S%f')+'_morph_hybrid_'+model_name+'.txt')
+    if align_tokens:
+        temp_tokens_path = temp_tokens_path.replace('_morph_hybrid_', '_morph_hybrid_align_tokens_')
+        temp_morph_ner_output_path = temp_tokens_path.replace('.txt','_morph_ner.txt')
+    else: 
+        temp_morph_ner_output_path = output_path
     temp_conf_path = temp_tokens_path.replace('.txt','_ncrf.conf')
     temp_yap_log_path = temp_tokens_path.replace('.txt','_yap.log')
     temp_lattices_path = temp_tokens_path.replace('.txt','.lattices')
@@ -256,9 +337,20 @@ def run_morph_hybrid(model_name, input_path, output_path):
         form_sents = lat.groupby('sent_id').form.apply(lambda x: x.tolist()).tolist()
         write_tokens_file(form_sents, temp_ncrf_morph_input, dummy_o=True)
         #run ncrf morph model
-        write_ncrf_conf(temp_conf_path, temp_ncrf_morph_input, output_path, MODEL_PATHS[model_name]['model'], MODEL_PATHS[model_name]['dset'])
+        write_ncrf_conf(temp_conf_path, temp_ncrf_morph_input, temp_morph_ner_output_path, MODEL_PATHS[model_name]['model'], MODEL_PATHS[model_name]['dset'])
         run_ncrf_main(temp_conf_path, DEVICE, temp_ncrf_log_path)
         
+        if align_tokens:
+            prun_yo = bclm.read_yap_output(treebank_set=None,
+                                       tokens_path=temp_tokens_path,
+                                       dep_path=temp_conll_path,
+                                       map_path=temp_map_path,
+                                        )
+            prun_sents = bclm.get_sentences_list(prun_yo, fields=['token_id', 'token_str'])
+            new_toks = get_fixed_tok(temp_morph_ner_output_path, orig_sents=prun_sents)
+            new_sents = bclm.get_sentences_list(new_toks, fields=['token_str', 'fixed_bio'])
+            write_tokens_file(new_sents, output_path)
+
     except Exception as e:
         print(traceback.format_exc())
     #delete all temp files
@@ -266,7 +358,7 @@ def run_morph_hybrid(model_name, input_path, output_path):
         for path in [temp_tokens_path, temp_conf_path, temp_yap_log_path, temp_lattices_path, 
                      temp_seg_path, temp_map_path, temp_conll_path,
                      temp_ncrf_morph_input, temp_ncrf_log_path,
-                     temp_multi_output_path, temp_pruned_lattices_path]:
+                     temp_multi_output_path, temp_pruned_lattices_path, temp_morph_ner_output_path]:
             if os.path.exists(path):
                 os.remove(path)
 
@@ -326,13 +418,7 @@ def run_multi_align_hybrid(model_name, input_path, output_path):
                      temp_multi_output_path, temp_pruned_lattices_path]:
             if os.path.exists(path):
                 os.remove(path)    
-    
-    
-def run_morph_tok(model_name, input_path, output_path):
-    pass
 
- 
-    
     
 if __name__=='__main__':
     command = sys.argv[1]
@@ -363,7 +449,7 @@ if __name__=='__main__':
     if command=='multi_align_hybrid':
         run_multi_align_hybrid(model_name, input_path, output_path)
         
-    #run morph model on hybrid segmented output and align back with tokens
-    if command=='morph_hybrid_align_token':
-        run_morph_hybrid_align_token(model_name, input_path, output_path)
+    #run morph model on hybrid segmented output and result align back to tokens
+    if command=='morph_hybrid_align_tokens':
+        run_morph_hybrid(model_name, input_path, output_path, align_tokens=True)
 
