@@ -163,7 +163,7 @@ def run_ner_model(model_name, input_path, output_path):
 
         run_ncrf_main(temp_conf_path, DEVICE, temp_log_path)
     except Exception as e:
-        print(e)
+        print(traceback.format_exc())
     if DELETE_TEMP_FILES:
         for path in [temp_input_path, temp_conf_path, temp_log_path]:
             if os.path.exists(path):
