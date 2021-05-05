@@ -4,12 +4,12 @@
 
 ## Requirements
 
-'''
+```
 python>=3.6
 torch=1.0
 bclm>=1.0.0
 networkx
-'''
+```
 
 An installation of https://github.com/OnlpLab/yap, change path in TODO: `config.py`
 
