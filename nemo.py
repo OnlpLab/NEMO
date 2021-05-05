@@ -112,6 +112,7 @@ def run_yap_hebma(tokens_path, output_path, log_path):
     if len(result.stderr)>0:
         print(result.stderr) 
 
+        
 def run_yap_joint(lattices_path, seg_path, map_path, conll_path, log_path):
     result = subprocess.run([YAP_PATH, 'joint', '-in', lattices_path, 
                     '-os', seg_path, '-om', map_path, '-oc', conll_path], capture_output=True)
@@ -147,7 +148,8 @@ def run_ner_model(model_name, input_path, output_path):
         for path in [temp_input_path, temp_conf_path, temp_log_path]:
             if os.path.exists(path):
                 os.remove(path)
-                
+             
+            
 def run_morph_yap(model_name, input_path, output_path):
     temp_tokens_path = os.path.join(LOCAL_TEMP_FOLDER, datetime.datetime.now().strftime('%Y%m%d%H%M%S%f')+'.txt')
     temp_conf_path = temp_tokens_path.replace('.txt','_ncrf.conf')
