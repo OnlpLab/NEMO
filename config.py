@@ -16,7 +16,7 @@ MODEL_PATHS = {
     'morph': { 'model': 'data/morph.char_cnn.ft_yap.50_seed.80.model',
               'dset': 'data/morph.char_cnn.ft_yap.50_seed.dset'}
 }
-MULTI_MODEL_FOR_HYBRID = 'multi'
+MULTI_MODEL_FOR_HYBRID = 'token-multi'
 
 YAP_PATH = '../yapproj/src/yap/yap'
 
