@@ -1,4 +1,4 @@
-# 🐠 NEMO<sup>2</sup> - Neural Modeling for (Hebrew) Named Entities and Morphology
+# 🐠<sup>🐠</sup> NEMO<sup>2</sup> - Neural Modeling for (Hebrew) Named Entities and Morphology
 ## Introduction
 
 ## Main Features
