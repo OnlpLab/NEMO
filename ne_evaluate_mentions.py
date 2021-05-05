@@ -1,7 +1,6 @@
 from collections import defaultdict
 from itertools import islice
 import pandas as pd
-from functools import lru_cache
 
 def fix_multi_biose(tag, multi_delim='^'):
     parts = [x[0] for x in tag.split('^')]
@@ -25,7 +24,6 @@ def fix_multi_biose(tag, multi_delim='^'):
     return bio+cat
 
 
-@lru_cache(32)
 def read_file_sents(path, comment_prefix='#', field_delim=' ', multi_delim='^', fix_multi_tag=True, sent_id_shift=0):
     sents = []
     for i, sent in enumerate(open(path, 'r', encoding='utf8').read().split('\n\n')):

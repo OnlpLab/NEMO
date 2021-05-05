@@ -7,6 +7,7 @@ import networkx as nx
 import traceback
 
 from config import *
+from ne_evaluate_mentions import fix_multi_biose, read_file_sents
 
 def read_text_file(path):
     sents = []
@@ -132,7 +133,7 @@ def run_ncrf_main(conf_path, device, log_path):
         
 
 def run_ner_model(model_name, input_path, output_path):
-    temp_input_path = os.path.join(LOCAL_TEMP_FOLDER, datetime.datetime.now().strftime('%Y%m%d%H%M%S%f')+'.txt')
+    temp_input_path = os.path.join(LOCAL_TEMP_FOLDER, datetime.datetime.now().strftime('%Y%m%d%H%M%S%f')+'_run_ner_model_'+model_name+'.txt')
     temp_conf_path = temp_input_path.replace('.txt','.conf')
     temp_log_path = temp_input_path.replace('.txt','.log')
     try:
@@ -151,7 +152,7 @@ def run_ner_model(model_name, input_path, output_path):
              
             
 def run_morph_yap(model_name, input_path, output_path):
-    temp_tokens_path = os.path.join(LOCAL_TEMP_FOLDER, datetime.datetime.now().strftime('%Y%m%d%H%M%S%f')+'.txt')
+    temp_tokens_path = os.path.join(LOCAL_TEMP_FOLDER, datetime.datetime.now().strftime('%Y%m%d%H%M%S%f')+'_morph_yap_'+model_name+'.txt')
     temp_conf_path = temp_tokens_path.replace('.txt','_ncrf.conf')
     temp_yap_log_path = temp_tokens_path.replace('.txt','_yap.log')
     temp_lattices_path = temp_tokens_path.replace('.txt','.lattices')
@@ -188,7 +189,7 @@ def run_morph_yap(model_name, input_path, output_path):
 
                 
 def run_morph_hybrid(model_name, input_path, output_path):
-    temp_tokens_path = os.path.join(LOCAL_TEMP_FOLDER, datetime.datetime.now().strftime('%Y%m%d%H%M%S%f')+'.txt')
+    temp_tokens_path = os.path.join(LOCAL_TEMP_FOLDER, datetime.datetime.now().strftime('%Y%m%d%H%M%S%f')+'_morph_hybrid_'+model_name+'.txt')
     temp_conf_path = temp_tokens_path.replace('.txt','_ncrf.conf')
     temp_yap_log_path = temp_tokens_path.replace('.txt','_yap.log')
     temp_lattices_path = temp_tokens_path.replace('.txt','.lattices')
@@ -227,10 +228,25 @@ def run_morph_hybrid(model_name, input_path, output_path):
         for path in [temp_tokens_path, temp_conf_path, temp_yap_log_path, temp_lattices_path, 
                      temp_seg_path, temp_map_path, temp_conll_path,
                      temp_ncrf_morph_input, temp_ncrf_log_path,
-                     temp_multi_output_path, temp_pruned_lattices_path:
+                     temp_multi_output_path, temp_pruned_lattices_path]:
             if os.path.exists(path):
                 os.remove(path)
-        
+
+                     
+def multi_to_single(model_name, input_path, output_path):
+    temp_multi_output_path = os.path.join(LOCAL_TEMP_FOLDER, datetime.datetime.now().strftime('%Y%m%d%H%M%S%f')+'_multi_to_single_'+model_name+'.txt')
+    try:
+        run_ner_model(model_name, input_path, temp_multi_output_path)
+        sents = read_file_sents(temp_multi_output_path, fix_multi_tag=True).tolist()
+        write_tokens_file(sents, output_path)
+    except Exception as e:
+        print(traceback.format_exc())
+    #delete all temp files
+    if DELETE_TEMP_FILES:
+        for path in [temp_multi_output_path]:
+            if os.path.exists(path):
+                os.remove(path)          
+                     
 def run_multi_hybrid(model_name, input_path, output_path):
     pass
     
@@ -255,8 +271,8 @@ if __name__=='__main__':
         run_ner_model(model_name, input_path, output_path)
     
     #run multi model and transform multi-labels to single label per token
-    if command=='token_multi':
-        run_morph_yap(model_name, input_path, output_path)
+    if command=='multi_to_single':
+        multi_to_single(model_name, input_path, output_path)
         
     #run morph model on yap segmented output
     if command=='morph_yap':
