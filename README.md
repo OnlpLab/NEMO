@@ -32,6 +32,7 @@ Code and models for neural modeling of Hebrew NER. Described in the TACL paper [
         - ```python nemo.py run_ner_model token-single example.txt example_output.txt```
     * the `morph_hybrid` command runs the end-to-end segmentation and NER pipeline which provided our best performing morpheme-level NER boundaries:  
         - ```python nemo.py morph_yap morph example.txt example_output_MORPH.txt```
+1. You can find outputs of different commands on [example.txt](./example.txt) in: [example_output_MORPH_HYBRID_ALIGN_TOKENS.txt](./example_output_MORPH_HYBRID_ALIGN_TOKENS.txt), [example_output_MORPH_HYBRID.txt](./example_output_MORPH_HYBRID.txt), [example_output_MORPH_YAP.txt](./example_output_MORPH_YAP.txt), [example_output_MULTI_ALIGN.txt](./example_output_MULTI_ALIGN.txt), [example_output_SINGLE.txt](./example_output_SINGLE.txt)
 1. For a full list of the available commands please consult the [next section](#models-and-scenarios) and the inline documentation at the end of `nemo.py`. 
 1. Please use only the regular and not the `*_oov` models (which contain embeddings only for words that appear in the NEMO corpus). Unless you use the model to replicate our results on the Hebrew treebank, always use e.g. `token-multi` and not `token-multi_oov`. 
 
