@@ -51,8 +51,8 @@ Morphemes must be predicted. This is done by performing morphological disambigua
 
 MD Approach        |  Commands
 :-------------------------:|:---------------------:
-Standard <img src="./docs/standard_diagram.svg" alt="Standard MD" width="345" /> |  `morph_yap`
-Hybrid <img src="./docs/hybrid_diagram.png" alt="Hybrid MD" width="345" /> | `morph_hybrid`,<br>`multi_align_hybrid`,<br>`morph_hybrid_align_tokens`
+Standard <img src="./docs/standard_diagram.png" alt="Standard MD" width="345" /> |  `morph_yap`
+Hybrid <img src="./docs/hybrid_diagram.png" alt="Hybrid MD" width="345" /> <br> <img src="./docs/lattice_pruning.png" alt="Hybrid MD" width="345" /> | `morph_hybrid`,<br>`multi_align_hybrid`,<br>`morph_hybrid_align_tokens`
 
 Finally, to get our desired output (tokens/morphemes), we can choose between different scenarios, some involving extra post-processing alignments:
 1. To get morpheme-level labels we have two options:
@@ -62,7 +62,7 @@ Finally, to get our desired output (tokens/morphemes), we can choose between dif
     *  `run_ner_model` command with `token-single` model.
     * `token-multi` labels can be mapped to `token-single` labels to get standard token-lingle output. Command: `multi_to_single`.
     * Morpheme-levl output can be aligned back to token-level boundaries. Command: `morph_hybrid_align_tokens` (achieved best token-level results in our experiments). 
-1. Note: while the `morph_hybrid*` scenarios perform better, they are less efficient since they requires running both `morph` and `token-multi` NER models
+1. Note: while the `morph_hybrid*` scenarios offer the best performance, they are less efficient since they requires running both `morph` and `token-multi` NER models.
 
 TODO:Table with alignment scenario figures with relevant commands
 
