@@ -49,30 +49,30 @@ Morphemes must be predicted. This is done by performing morphological disambigua
 1. **Standard pipeline**: MD using YAP. This is used in the `morph_yap` command, which runs our `morph` NER model on the output of YAP joint segmentation.
 1. **Hybrid pipeline**: MD using our best performing *Hybrid* approach, which uses the output of the `token-multi` model to reduce the MD option space. This is used in `morph_hybrid`, `multi_align_hybrid` and `morph_hybrid_align_tokens`. We will explain these scenarios next.
 
-MD Approach        |  Commands
-                --:|:---------------------:
-Standard <img src="./docs/standard_diagram.png" alt="Standard MD" width="345" /> |  `morph_yap`
-Hybrid <img src="./docs/hybrid_diagram.png" alt="Hybrid MD" width="345" /> <br> <img src="./docs/lattice_pruning.png" alt="Hybrid MD" width="345" /> | `morph_hybrid`,<br>`multi_align_hybrid`,<br>`morph_hybrid_align_tokens`
+|MD Approach        |  Commands |
+|                --:|:---------------------:|
+| Standard <img src="./docs/standard_diagram.png" alt="Standard MD" width="345" /> |  `morph_yap`
+| Hybrid <img src="./docs/hybrid_diagram.png" alt="Hybrid MD" width="345" /> <br> <img src="./docs/lattice_pruning.png" alt="Hybrid MD" width="345" /> | `morph_hybrid`,<br>`multi_align_hybrid`,<br>`morph_hybrid_align_tokens`|
 
 Finally, to get our desired output (tokens/morphemes), we can choose between different scenarios, some involving extra post-processing alignments:
 1. To get morpheme-level labels we have two options:
     * Run our `morph` NER model on predicted morphemes: Commands: `morph_yap` or `morph_hybrid` (better). 
     * `token-multi` labels can be aligned with predicted morphemes to get morpheme-level boundaries. Command: `multi_align_hybrid`.
     
-`morph` NER on Predicted Morphemes        |  Multi Predictions Aligned with Predicted Morpheme  
- :               --:|:---------------------:
-<img src="./docs/morph_ner.png" alt="Morph NER on Predicted Morphemes" width="175" /> |  <img src="./docs/multi_align_morph.png" alt="Multi Predictions Aligned with Predicted Morpheme" width="345" />
-`morph_yap`,`morph_hybrid` | `multi_align_hybrid`
+|`morph` NER on Predicted Morphemes        |  Multi Predictions Aligned with Predicted Morpheme  |
+| :--:|:---------------------:
+|<img src="./docs/morph_ner.png" alt="Morph NER on Predicted Morphemes" width="175" /> |  <img src="./docs/multi_align_morph.png" alt="Multi Predictions Aligned with Predicted Morpheme" width="345" /> |
+|`morph_yap`,`morph_hybrid` | `multi_align_hybrid` |
 
 2. To get token-level labels we have three options:
     *  `run_ner_model` command with `token-single` model.
     * `token-multi` labels can be mapped to `token-single` labels to get standard token-lingle output. Command: `multi_to_single`.
     * Morpheme-level output can be aligned back to token-level boundaries. Command: `morph_hybrid_align_tokens` (achieved best token-level results in our experiments). 
     
-Run `token-single`        |  Map `token-multi` to `token-single` | Align `morph` NER with Tokens   
- :               --:|:---------------------:
-<img src="./docs/token_single.png" alt="Run token-single" width="175" /> |  <img src="./docs/multi_to_single.png" alt="Map token-multi to token-single" width="345" /> | <img src="./docs/morph_align_tokens.png" alt="Align morph NER with Tokens" width="345" />
-`run_ner_model token-single` | `multi_to_single` | `morph_hybrid_align_tokens` 
+|Run `token-single`        |  Map `token-multi` to `token-single` | Align `morph` NER with Tokens  | 
+|:--:|:---------------------:
+|<img src="./docs/token_single.png" alt="Run token-single" width="175" /> |  <img src="./docs/multi_to_single.png" alt="Map token-multi to token-single" width="345" /> | <img src="./docs/morph_align_tokens.png" alt="Align morph NER with Tokens" width="345" /> |
+|`run_ner_model token-single` | `multi_to_single` | `morph_hybrid_align_tokens` |
 
 * Note: while the `morph_hybrid*` scenarios offer the best performance, they are less efficient since they requires running both `morph` and `token-multi` NER models.
 
