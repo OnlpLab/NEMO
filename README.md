@@ -1,6 +1,23 @@
 # 🐠<sup>🐠</sup> NEMO<sup>2</sup> - Neural Modeling for (Hebrew) Named Entities and Morphology
+
+
+Table of Contents
+=================
+* [Introduction](#introduction)
+* [Main Features](#main-features)
+* [Requirements](#requirements)
+* [Setup](#setup)
+* [Basic Usage](#basic-usage)
+* [Models and Scenarios](#models-and-scenarios)
+* [Important Notes](#important-notes)
+* [Training your own model](#training-your-own-model)
+* [Evaluation](#evaluation)
+* [Citations](#citations)
+
+
 ## Introduction
 Code and models for neural modeling of Hebrew NER. Described in the TACL paper [""*Neural Modeling for Named Entities and Morphology (NEMO<sup>2</sup>)"*](https://arxiv.org/abs/2007.15620) along with extensive experiments on the different modeling scenarios provided in this repository.
+
 
 ## Main Features
 1. Trained on the [NEMO corpus](https://github.com/OnlpLab/NEMO-Corpus) of gold annotated Modern Hebrew news articles. 
@@ -98,11 +115,14 @@ python ncrf_main.py --config <path_to_config> --device <gpu_device_number>
 
 
 ## Evaluation
-Evaluation is slightly different than the standard CoNLL2003 evaluation commonly used for NER. Predicted segmentation differs from gold, so exact indexes can't be used. What we do is extract multi-sets of entity mentions and use set operations to compute precision, recall and F1-score. To evaluate an output prediction file against a gold file use:
+Use the [ne_evaluate_mentions.py](./ne_evaluate_mentions.py) script. Evaluation looks for exact match of string and entity category, but is slightly different than the standard CoNLL2003 evaluation commonly used for NER. The reason is that predicted segmentation differs from gold, so positional indexes of sequence labels can't be used. What we do instead, is extract multi-sets of entity mentions and use set operations to compute precision, recall and F1-score. You can find more detailed discussion of evaluation in the NEMO<sup>2</sup> paper.  
+
+To evaluate an output prediction file against a gold file use:
 ```bash
 python ne_evaluate_mentions.py <path_to_gold_ner> <path_to_predicted_ner>
 ```
 If you're within python, just call the `ne_evaluate_mentions.evaluate_files(...)` with the same parameters.
+
 
 ## Citations
 
