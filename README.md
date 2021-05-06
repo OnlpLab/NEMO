@@ -59,7 +59,7 @@ Finally, to get our desired output (tokens/morphemes), we can choose between dif
     * Run our `morph` NER model on predicted morphemes: Commands: `morph_yap` or `morph_hybrid` (better). 
     * `token-multi` labels can be aligned with predicted morphemes to get morpheme-level boundaries. Command: `multi_align_hybrid`.
     
-|`morph` NER on Predicted Morphemes        |  Multi Predictions Aligned with Predicted Morpheme  |
+|Run `morph` NER on Predicted Morphemes        |  Multi Predictions Aligned with Predicted Morpheme  |
 | :--:|:---------------------:
 |<img src="./docs/morph_ner.png" alt="Morph NER on Predicted Morphemes" width="175" /> |  <img src="./docs/multi_align_morph.png" alt="Multi Predictions Aligned with Predicted Morpheme" width="345" /> |
 |`morph_yap`,`morph_hybrid` | `multi_align_hybrid` |
@@ -69,8 +69,8 @@ Finally, to get our desired output (tokens/morphemes), we can choose between dif
     * `token-multi` labels can be mapped to `token-single` labels to get standard token-lingle output. Command: `multi_to_single`.
     * Morpheme-level output can be aligned back to token-level boundaries. Command: `morph_hybrid_align_tokens` (achieved best token-level results in our experiments). 
     
-|Run `token-single`        |  Map `token-multi` to `token-single` | Align `morph` NER with Tokens  | 
-|:--:|:---------------------:
+| Run `token-single`        |  Map `token-multi` to `token-single` | Align `morph` NER with Tokens  | 
+|:--:|:---------------------:|:---:|
 |<img src="./docs/token_single.png" alt="Run token-single" width="175" /> |  <img src="./docs/multi_to_single.png" alt="Map token-multi to token-single" width="345" /> | <img src="./docs/morph_align_tokens.png" alt="Align morph NER with Tokens" width="345" /> |
 |`run_ner_model token-single` | `multi_to_single` | `morph_hybrid_align_tokens` |
 
