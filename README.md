@@ -115,7 +115,7 @@ python ncrf_main.py --config <path_to_config> --device <gpu_device_number>
 
 
 ## Evaluation
-Use the [ne_evaluate_mentions.py](./ne_evaluate_mentions.py) script. Evaluation looks for exact match of string and entity category, but is slightly different than the standard CoNLL2003 evaluation commonly used for NER. The reason is that predicted segmentation differs from gold, so positional indexes of sequence labels can't be used. What we do instead, is extract multi-sets of entity mentions and use set operations to compute precision, recall and F1-score. You can find more detailed discussion of evaluation in the NEMO<sup>2</sup> paper.  
+To evaluate your predictions against gold use the [ne_evaluate_mentions.py](./ne_evaluate_mentions.py) script. Evaluation looks for exact match of string and entity category, but is slightly different than the standard CoNLL2003 evaluation commonly used for NER. The reason is that predicted segmentation differs from gold, so positional indexes of sequence labels can't be used. What we do instead, is extract multi-sets of entity mentions and use set operations to compute precision, recall and F1-score. You can find more detailed discussion of evaluation in the NEMO<sup>2</sup> paper.  
 
 To evaluate an output prediction file against a gold file use:
 ```bash
