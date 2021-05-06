@@ -27,14 +27,14 @@ Code and models for neural modeling of Hebrew NER. Described in the TACL paper [
 
 ## Basic Usage
 1. All you need to do is run `nemo.py` with specific command (scenario), with a text file of Hebrew sentences separated by a linebreak as input.
-1. We provide direct run of the neural NER models, as well as full end-to-end scenarios that include morphological segmentation and alignments (described fully in the [next section](#models-and-scenarios)). e.g.:
+1. You can run a neural NER models directly, or choose a full end-to-end scenario that includes morphological segmentation and alignments (described fully in the [next section](#models-and-scenarios)). e.g.:
     * the `run_ner_model` command with the `token-single` model will tokenize sentences and run the `token-single` model: 
         - ```python nemo.py run_ner_model token-single example.txt example_output.txt```
     * the `morph_hybrid` command runs the end-to-end segmentation and NER pipeline which provided our best performing morpheme-level NER boundaries:  
         - ```python nemo.py morph_yap morph example.txt example_output_MORPH.txt```
 1. You can find outputs of different commands on [example.txt](./example.txt) in: [example_output_MORPH_HYBRID_ALIGN_TOKENS.txt](./example_output_MORPH_HYBRID_ALIGN_TOKENS.txt), [example_output_MORPH_HYBRID.txt](./example_output_MORPH_HYBRID.txt), [example_output_MORPH_YAP.txt](./example_output_MORPH_YAP.txt), [example_output_MULTI_ALIGN.txt](./example_output_MULTI_ALIGN.txt), [example_output_SINGLE.txt](./example_output_SINGLE.txt)
 1. For a full list of the available commands please consult the [next section](#models-and-scenarios) and the inline documentation at the end of `nemo.py`. 
-1. Please use only the regular and not the `*_oov` models (which contain embeddings only for words that appear in the NEMO corpus). Unless you use the model to replicate our results on the Hebrew treebank, always use e.g. `token-multi` and not `token-multi_oov`. 
+1. Please use only the regular and not the `*_oov` models (which contain embeddings only for words that appear in the NEMO corpus). In other words, unless you use the model to replicate our results on the Hebrew treebank, always use e.g. `token-multi` and not `token-multi_oov`. 
 
 
 ## Models and Scenarios
@@ -78,8 +78,6 @@ Finally, to get our desired output (tokens/morphemes), we can choose between dif
 * Note: while the `morph_hybrid*` scenarios offer the best performance, they are less efficient since they requires running both `morph` and `token-multi` NER models.
 
 
-
-
 ## Important Notes
 1. NCRFpp was great for our experiments on the NEMO corpus (which is given, constant, data), but it holds some caveats for real life scenarios of arbitrary text:
     * fastText is not used on the fly to obtain vectors for OOV words (which were not seen in our Wikipedia corpus). Instead, it is used as a regular embedding matrix. In our experiments we created such a matrix in advance with all the words of our, and used during training. Hence the full generalization capacities of fastText, as shown in our experiments, are not available in the currently provided models, which will perform slightly worse than they could on arbitrary text. Information regarding training your own model with your own vocabulary in the [next section](#training-your-own-model).
@@ -98,6 +96,13 @@ python ncrf_main.py --config <path_to_config> --device <gpu_device_number>
 ```
 4. For more information please consult [NCRF++](https://github.com/jiesutd/NCRFpp) documentation.
 
+
+## Evaluation
+Evaluation is slightly different than the standard CoNLL2003 evaluation commonly used for NER. Predicted segmentation differs from gold, so exact indexes can't be used. What we do is extract multi-sets of entity mentions and use set operations to compute precision, recall and F1-score. To evaluate an output prediction file against a gold file use:
+```bash
+python ne_evaluate_mentions.py <path_to_gold_ner> <path_to_predicted_ner>
+```
+If you're within python, just call the `ne_evaluate_mentions.evaluate_files(...)` with the same parameters.
 
 ## Citations
 
