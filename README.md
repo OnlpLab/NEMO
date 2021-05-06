@@ -1,10 +1,12 @@
 # 🐠<sup>🐠</sup> NEMO<sup>2</sup> - Neural Modeling for (Hebrew) Named Entities and Morphology
 ## Introduction
+Code and models for neural modeling of Hebrew NER. Described in the TACL paper [*Neural Modeling for Named Entities and Morphology (NEMO<sup>2</sup>)*](https://arxiv.org/abs/2007.15620) along with extensive experiments on the different modeling scenarios provided in this repository.
 
 ## Main Features
-1. Multiple modeling options to go from raw text to morpheme and/or token-level NER boundaries.
+1. Trained on the [NEMO corpus](https://github.com/OnlpLab/NEMO-Corpus) of gold annotated Modern Hebrew news articles. 
+1. Multiple modeling options to go from raw Hebrew text to morpheme and/or token-level NER boundaries.
 1. Neural model implementation of [NCRFpp](https://github.com/jiesutd/NCRFpp)
-1. [bclm](https://github.com/OnlpLab/bclm) is used for reading and transforming morpho-syntactic files.
+1. [bclm](https://github.com/OnlpLab/bclm) is used for reading and transforming morpho-syntactic information layers.
 
 
 ## Requirements
@@ -29,6 +31,10 @@
     * For `morph hybrid`, which provided our best performing morpheme-level boundaries:  `python nemo.py morph_yap morph example.txt example_output_MORPH.txt`
 1. For a full description of the available scenarios please consult the inline documentation at the end of `nemo.py`. 
 1. Please use only the regular and not the `*_oov` models (which contain embeddings only for words that appear in the NEMO corpus). Unless you use the model to replicate our results on the Hebrew treebank, always use e.g. `token-multi` and not `token-multi_oov`. 
+
+
+## Model and Scenario Description
+
 
 ## Important Notes
 1. NCRFpp was great for our experiments on the NEMO corpus (which is given, constant, data), but it holds some caveats for real life scenarios of arbitrary text:
