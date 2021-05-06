@@ -32,7 +32,7 @@ Code and models for neural modeling of Hebrew NER. Described in the TACL paper [
         - ```python nemo.py run_ner_model token-single example.txt example_output.txt```
     * the `morph_hybrid` command runs the end-to-end segmentation and NER pipeline which provided our best performing morpheme-level NER boundaries:  
         - ```python nemo.py morph_yap morph example.txt example_output_MORPH.txt```
-1. For a full list of the available commands please consult the inline documentation at the end of `nemo.py`. 
+1. For a full list of the available commands please consult the [next section](#models-and-scenarios) and the inline documentation at the end of `nemo.py`. 
 1. Please use only the regular and not the `*_oov` models (which contain embeddings only for words that appear in the NEMO corpus). Unless you use the model to replicate our results on the Hebrew treebank, always use e.g. `token-multi` and not `token-multi_oov`. 
 
 
@@ -50,7 +50,7 @@ Morphemes must be predicted. This is done by performing morphological disambigua
 1. **Hybrid pipeline**: MD using our best performing *Hybrid* approach, which uses the output of the `token-multi` model to reduce the MD option space. This is used in `morph_hybrid`, `multi_align_hybrid` and `morph_hybrid_align_tokens`. We will explain these scenarios next.
 
 MD Approach        |  Commands
-:-------------------------:|:---------------------:
+                --:|:---------------------:
 Standard <img src="./docs/standard_diagram.png" alt="Standard MD" width="345" /> |  `morph_yap`
 Hybrid <img src="./docs/hybrid_diagram.png" alt="Hybrid MD" width="345" /> <br> <img src="./docs/lattice_pruning.png" alt="Hybrid MD" width="345" /> | `morph_hybrid`,<br>`multi_align_hybrid`,<br>`morph_hybrid_align_tokens`
 
@@ -58,13 +58,26 @@ Finally, to get our desired output (tokens/morphemes), we can choose between dif
 1. To get morpheme-level labels we have two options:
     * Run our `morph` NER model on predicted morphemes: Commands: `morph_yap` or `morph_hybrid` (better). 
     * `token-multi` labels can be aligned with predicted morphemes to get morpheme-level boundaries. Command: `multi_align_hybrid`.
-1. To get token-level labels we have three options:
+    
+`morph` NER on Predicted Morphemes        |  Multi Predictions Aligned with Predicted Morpheme  
+ :               --:|:---------------------:
+<img src="./docs/morph_ner.png" alt="Morph NER on Predicted Morphemes" width="175" /> |  <img src="./docs/multi_align_morph.png" alt="Multi Predictions Aligned with Predicted Morpheme" width="345" />
+`morph_yap`,`morph_hybrid` | `multi_align_hybrid`
+
+2. To get token-level labels we have three options:
     *  `run_ner_model` command with `token-single` model.
     * `token-multi` labels can be mapped to `token-single` labels to get standard token-lingle output. Command: `multi_to_single`.
-    * Morpheme-levl output can be aligned back to token-level boundaries. Command: `morph_hybrid_align_tokens` (achieved best token-level results in our experiments). 
-1. Note: while the `morph_hybrid*` scenarios offer the best performance, they are less efficient since they requires running both `morph` and `token-multi` NER models.
+    * Morpheme-level output can be aligned back to token-level boundaries. Command: `morph_hybrid_align_tokens` (achieved best token-level results in our experiments). 
+    
+Run `token-single`        |  Map `token-multi` to `token-single` | Align `morph` NER with Tokens   
+ :               --:|:---------------------:
+<img src="./docs/token_single.png" alt="Run token-single" width="175" /> |  <img src="./docs/multi_to_single.png" alt="Map token-multi to token-single" width="345" /> | <img src="./docs/morph_align_tokens.png" alt="Align morph NER with Tokens" width="345" />
+`run_ner_model token-single` | `multi_to_single` | `morph_hybrid_align_tokens` 
 
-TODO:Table with alignment scenario figures with relevant commands
+* Note: while the `morph_hybrid*` scenarios offer the best performance, they are less efficient since they requires running both `morph` and `token-multi` NER models.
+
+
+
 
 ## Important Notes
 1. NCRFpp was great for our experiments on the NEMO corpus (which is given, constant, data), but it holds some caveats for real life scenarios of arbitrary text:
