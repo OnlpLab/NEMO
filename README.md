@@ -33,7 +33,13 @@ Code and models for neural modeling of Hebrew NER. Described in the TACL paper [
 1. Please use only the regular and not the `*_oov` models (which contain embeddings only for words that appear in the NEMO corpus). Unless you use the model to replicate our results on the Hebrew treebank, always use e.g. `token-multi` and not `token-multi_oov`. 
 
 
-## Model and Scenario Description
+## Models and Scenario Description
+The models are all a standard Bi-LSTM-CRF with character encoding (LSTM/CNN), using the implementation of [NCRFpp](https://github.com/jiesutd/NCRFpp). The differences between models lay in:
+1. Input granularity: morphemes vs. tokens
+1. Output label set: single sequence labels (e.g. `B-ORG`) vs. multi-labels (atomic labels, e.g. `O-ORG^B-ORG^I-ORG`) that predict, in order, the labels for the morphemes the token is made of.
+Token-based Models         |  Morpheme-based Model
+:-------------------------:|:-------------------------:
+![](./morph_model.svg)  |  ![](./token_models.svg)
 
 
 ## Important Notes
