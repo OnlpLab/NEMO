@@ -42,12 +42,12 @@ def read_file_sents(path, comment_prefix='#', field_delim=' ', multi_delim='^', 
     return sents
 
 
-def evaluate_files(gold_path, pred_path, fix_multi_tag_pred=True, truncate=None, ignore_cat=False, str_join_char=' '):
+def evaluate_files(gold_path, pred_path, fix_multi_tag_pred=True, truncate=None, ignore_cat=False, str_join_char=' ', verbose=False):
     gold_sents = read_file_sents(gold_path)
     pred_sents = read_file_sents(pred_path)
     gold_mentions = sents_to_mentions(gold_sents, truncate=truncate, ignore_cat=ignore_cat, str_join_char=str_join_char)
     pred_mentions = sents_to_mentions(pred_sents, truncate=truncate, ignore_cat=ignore_cat, str_join_char=str_join_char)
-    return evaluate_mentions(gold_mentions, pred_mentions, verbose=False)
+    return evaluate_mentions(gold_mentions, pred_mentions, verbose=verbose)
 
 
 def evaluate_mentions(true_ments, pred_ments, examples=5, verbose=True, return_tpc=False):
@@ -166,3 +166,8 @@ def get_sents_with_pred_tags(splits, preds, truncate=80):
         spl_preds = pd.Series(spl_preds, index=test_sents.index)
         sents_preds.append(spl_preds)
     return sents_preds
+
+
+if '__main__' == __name__:
+    import sys
+    evaluate_files(sys.argv[1], sys.argv[2], str_join_char='', verbose=True)
