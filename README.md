@@ -5,7 +5,7 @@ Code and models for neural modeling of Hebrew NER. Described in the TACL paper [
 ## Main Features
 1. Trained on the [NEMO corpus](https://github.com/OnlpLab/NEMO-Corpus) of gold annotated Modern Hebrew news articles. 
 1. Multiple modeling options to go from raw Hebrew text to morpheme and/or token-level NER boundaries.
-1. Neural model implementation of [NCRFpp](https://github.com/jiesutd/NCRFpp)
+1. Neural model implementation of [NCRF++](https://github.com/jiesutd/NCRFpp)
 1. [bclm](https://github.com/OnlpLab/bclm) is used for reading and transforming morpho-syntactic information layers.
 
 
@@ -89,6 +89,14 @@ Finally, to get our desired output (tokens/morphemes), we can choose between dif
 
 
 ## Training your own model
+We provide template NCRF++ config files. These files already contain the hyperparameters we used in our training. To train your own model:
+1. Copy the config for the variant (token-multi, token-single, morph) you wish to use from the [ncrf_train_configs](./ncrf_train_configs) folder.
+1. Change the parameter `word_emb_dir`  to that of an embedding vectors file in standard word2vec textual format.
+1. Run the following in your shell: 
+```bash
+python ncrf_main.py --config <path_to_config> --device <gpu_device_number>
+```
+4. For more information please consult [NCRF++](https://github.com/jiesutd/NCRFpp) documentation.
 
 
 ## Citations
