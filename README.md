@@ -121,7 +121,7 @@ To evaluate an output prediction file against a gold file use:
 ```bash
 python ne_evaluate_mentions.py <path_to_gold_ner> <path_to_predicted_ner>
 ```
-If you're within python, just call the `ne_evaluate_mentions.evaluate_files(...)` with the same parameters.
+If you're within python, just call `ne_evaluate_mentions.evaluate_files(...)` with the same parameters.
 
 
 ## Citations
