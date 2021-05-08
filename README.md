@@ -10,13 +10,13 @@ Table of Contents
 * [Basic Usage](#basic-usage)
 * [Models and Scenarios](#models-and-scenarios)
 * [Important Notes](#important-notes)
-* [Training your own model](#training-your-own-model)
+* [Training Your Own Model](#training-your-own-model)
 * [Evaluation](#evaluation)
 * [Citations](#citations)
 
 
 ## Introduction
-Code and models for neural modeling of Hebrew NER. Described in the TACL paper [""*Neural Modeling for Named Entities and Morphology (NEMO<sup>2</sup>)"*](https://arxiv.org/abs/2007.15620) along with extensive experiments on the different modeling scenarios provided in this repository.
+Code and models for neural modeling of Hebrew NER. Described in the TACL paper ["*Neural Modeling for Named Entities and Morphology (NEMO<sup>2</sup>)"*](https://arxiv.org/abs/2007.15620) along with extensive experiments on the different modeling scenarios provided in this repository.
 
 
 ## Main Features
@@ -43,7 +43,7 @@ Code and models for neural modeling of Hebrew NER. Described in the TACL paper [
 
 
 ## Basic Usage
-1. All you need to do is run `nemo.py` with specific command (scenario), with a text file of Hebrew sentences separated by a linebreak as input.
+1. All you need to do is run `nemo.py` with specific command (scenario), with a text file of Hebrew sentences separated by a line-break as input.
 1. You can run a neural NER models directly, or choose a full end-to-end scenario that includes morphological segmentation and alignments (described fully in the [next section](#models-and-scenarios)). e.g.:
     * the `run_ner_model` command with the `token-single` model will tokenize sentences and run the `token-single` model: 
         - ```python nemo.py run_ner_model token-single example.txt example_output.txt```
@@ -84,8 +84,8 @@ Finally, to get our desired output (tokens/morphemes), we can choose between dif
 
 2. To get token-level labels we have three options:
     *  `run_ner_model` command with `token-single` model.
-    * `token-multi` labels can be mapped to `token-single` labels to get standard token-lingle output. Command: `multi_to_single`.
-    * Morpheme-level output can be aligned back to token-level boundaries. Command: `morph_hybrid_align_tokens` (achieved best token-level results in our experiments). 
+    * the predicted labels of the `token-multi` can be mapped to `token-single` labels to get standard token-single output. The command `multi_to_single` does this end-to-end.
+    * Morpheme-level output can be aligned back to token-level boundaries. Command: `morph_hybrid_align_tokens` (this achieved best token-level results in our experiments). 
     
 | Run `token-single`        |  Map `token-multi` to `token-single` | Align `morph` NER with Tokens  | 
 |:--:|:---------------------:|:---:|
@@ -97,7 +97,7 @@ Finally, to get our desired output (tokens/morphemes), we can choose between dif
 
 ## Important Notes
 1. NCRFpp was great for our experiments on the NEMO corpus (which is given, constant, data), but it holds some caveats for real life scenarios of arbitrary text:
-    * fastText is not used on the fly to obtain vectors for OOV words (i.e. those that were not seen in our Wikipedia corpus). Instead, it is used as a regular embedding matrix. Hence the full generalization capacities of fastText, as shown in our experiments, are not available in the currently provided models, which will perform slightly worse than they could on arbitrary text. In our experiments we created such a matrix in advance with all the words in the NEMO corpus, and used it during training. Information regarding training your own model with your own vocabulary in the [next section](#training-your-own-model).
+    * fastText is not used on the fly to obtain vectors for OOV words (i.e. those that were not seen in our Wikipedia corpus). Instead, it is used as a regular embedding matrix. Hence the full generalization capacities of fastText, as shown in our experiments, are not available in the currently provided models, which will perform slightly worse than they could on arbitrary text. In our experiments we created such a matrix in advance with all the words in the NEMO corpus and used it during training. Information regarding training your own model with your own vocabulary in the [next section](#training-your-own-model).
     * We currently do not provide an API, only file input/outputs. The pipeline works in the background through temp files, you can choose to delete these by default using the `DELETE_TEMP_FILES` config parameter.  
 1. In the near future we plan to publish a cleaner end-to-end implementation, including use of our new [AlephBERT](https://github.com/OnlpLab/AlephBERT) pre-trained Transformer models. 
 1. For archiving and reproducibility purposes, our original code used for experiments and analysis can be found in the following repos: https://github.com/cjer/NCRFpp, https://github.com/cjer/NER (beware - 2 years of Jupyter notebooks).
@@ -111,11 +111,11 @@ We provide template NCRF++ config files. These files already contain the hyperpa
 ```bash
 python ncrf_main.py --config <path_to_config> --device <gpu_device_number>
 ```
-4. For more information please consult [NCRF++](https://github.com/jiesutd/NCRFpp) documentation.
+4. For more information, please consult [NCRF++](https://github.com/jiesutd/NCRFpp) documentation.
 
 
 ## Evaluation
-To evaluate your predictions against gold use the [ne_evaluate_mentions.py](./ne_evaluate_mentions.py) script. Evaluation looks for exact match of string and entity category, but is slightly different than the standard CoNLL2003 evaluation commonly used for NER. The reason is that predicted segmentation differs from gold, so positional indexes of sequence labels can't be used. What we do instead, is extract multi-sets of entity mentions and use set operations to compute precision, recall and F1-score. You can find more detailed discussion of evaluation in the NEMO<sup>2</sup> paper.  
+To evaluate your predictions against gold use the [ne_evaluate_mentions.py](./ne_evaluate_mentions.py) script. Evaluation looks for exact match of string and entity category, but is slightly different than the standard CoNLL2003 evaluation commonly used for NER. The reason is that predicted segmentation differs from gold, so positional indexes of sequence labels cannot be used. What we do instead, is extract multi-sets of entity mentions and use set operations to compute precision, recall and F1-score. You can find more detailed discussion of evaluation in the NEMO<sup>2</sup> paper.  
 
 To evaluate an output prediction file against a gold file use:
 ```bash
