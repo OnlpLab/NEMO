@@ -118,11 +118,11 @@ python ncrf_main.py --config <path_to_config> --device <gpu_device_number>
 ## Morpheme and Word Embeddings 
 The word embeddings we trained and used in our models are available:
 1. Space-delimited tokens: fastText ([bin](https://nlp.biu.ac.il/~danb/heb_embeds/wikipedia.alt_tok.tokenized.fasttext_skipgram.model.bin.gz), [text](https://nlp.biu.ac.il/~danb/heb_embeds/wikipedia.alt_tok.tokenized.fasttext_skipgram.txt.gz)), [GloVe](https://nlp.biu.ac.il/~danb/heb_embeds/wikipedia.alt_tok.tokenized.glove.txt.gz), [word2vec](https://nlp.biu.ac.il/~danb/heb_embeds/wikipedia.alt_tok.tokenized.word2vec_skipgram.txt.gz)
-1. Morphemes: fastText([bin](https://nlp.biu.ac.il/~danb/heb_embeds/wikipedia.alt_tok.yap_form.fasttext_skipgram.model.bin.gz), [text](https://nlp.biu.ac.il/~danb/heb_embeds/wikipedia.alt_tok.yap_form.fasttext_skipgram.txt.gz)), [GloVe](https://nlp.biu.ac.il/~danb/heb_embeds/wikipedia.alt_tok.yap_form.glove.txt.gz), [word2vec](https://nlp.biu.ac.il/~danb/heb_embeds/wikipedia.alt_tok.yap_form.word2vec_skipgram.txt.gz)
+1. Morphemes: fastText ([bin](https://nlp.biu.ac.il/~danb/heb_embeds/wikipedia.alt_tok.yap_form.fasttext_skipgram.model.bin.gz), [text](https://nlp.biu.ac.il/~danb/heb_embeds/wikipedia.alt_tok.yap_form.fasttext_skipgram.txt.gz)), [GloVe](https://nlp.biu.ac.il/~danb/heb_embeds/wikipedia.alt_tok.yap_form.glove.txt.gz), [word2vec](https://nlp.biu.ac.il/~danb/heb_embeds/wikipedia.alt_tok.yap_form.word2vec_skipgram.txt.gz)
 
 These were trained on a [2013 Wiki dump corpus by Yoav Goldberg](https://u.cs.biu.ac.il/~yogo/hebwiki/), which we re-tokenized and then re-parsed using YAP:
-1. [Space-delimited tokens](https://nlp.biu.ac.il/~danb/wiki_2013_corpus/wikipedia.alt_tok.yap_form.txt.gz)
-1. [Morphemes](https://nlp.biu.ac.il/~danb/wiki_2013_corpus/wikipedia.alt_tok.tokenized.txt.gz), automatic YAP segmentation (using the morpheme FORM)
+1. [Space-delimited tokens](https://nlp.biu.ac.il/~danb/wiki_2013_corpus/wikipedia.alt_tok.tokenized.txt.gz)
+1. [Morphemes](https://nlp.biu.ac.il/~danb/wiki_2013_corpus/wikipedia.alt_tok.yap_form.txt.gz), automatic YAP segmentation (using the morpheme FORM)
 1. [CONLL files](https://nlp.biu.ac.il/~danb/wiki_2013_corpus/wiki_joint.tar.gz) of full morpho-syntactic output of YAP
 
 
