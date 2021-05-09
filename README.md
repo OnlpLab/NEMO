@@ -113,7 +113,7 @@ We provide template NCRF++ config files. These files already contain the hyperpa
 python ncrf_main.py --config <path_to_config> --device <gpu_device_number>
 ```
 4. For more information, please consult [NCRF++](https://github.com/jiesutd/NCRFpp) documentation.
-
+5. To evaluate your trained models, please consult the [evaluation section](#evaluation).
 
 ## Morpheme and Word Embeddings 
 The word embeddings we trained and used in our models are available:
