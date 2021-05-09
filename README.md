@@ -11,6 +11,7 @@ Table of Contents
 * [Models and Scenarios](#models-and-scenarios)
 * [Important Notes](#important-notes)
 * [Training Your Own Model](#training-your-own-model)
+* [Morpheme and Word Embeddings](#morpheme-and-word-embeddings)
 * [Evaluation](#evaluation)
 * [Citations](#citations)
 
@@ -106,12 +107,23 @@ Finally, to get our desired output (tokens/morphemes), we can choose between dif
 ## Training your own model
 We provide template NCRF++ config files. These files already contain the hyperparameters we used in our training. To train your own model:
 1. Copy the config for the variant (token-multi, token-single, morph) you wish to use from the [ncrf_train_configs](./ncrf_train_configs) folder.
-1. Change the parameter `word_emb_dir`  to that of an embedding vectors file in standard word2vec textual format.
+1. Change the parameter `word_emb_dir`  to that of an embedding vectors file in standard word2vec textual format. You can use the fastText bin models we make available (in the [next section](#morpheme-and-word-embeddings)) or any other embedding vectors of your choice.
 1. Run the following in your shell: 
 ```bash
 python ncrf_main.py --config <path_to_config> --device <gpu_device_number>
 ```
 4. For more information, please consult [NCRF++](https://github.com/jiesutd/NCRFpp) documentation.
+
+
+## Morpheme and Word Embeddings 
+The word embeddings we trained and used in our models are available:
+1. Space-delimited tokens: fastText ([bin](https://nlp.biu.ac.il/~danb/heb_embeds/wikipedia.alt_tok.tokenized.fasttext_skipgram.model.bin.gz), [text](https://nlp.biu.ac.il/~danb/heb_embeds/wikipedia.alt_tok.tokenized.fasttext_skipgram.txt.gz)), [GloVe](https://nlp.biu.ac.il/~danb/heb_embeds/wikipedia.alt_tok.tokenized.glove.txt.gz), [word2vec](https://nlp.biu.ac.il/~danb/heb_embeds/wikipedia.alt_tok.tokenized.word2vec_skipgram.txt.gz)
+1. Morphemes: fastText([bin](https://nlp.biu.ac.il/~danb/heb_embeds/wikipedia.alt_tok.yap_form.fasttext_skipgram.model.bin.gz), [text](https://nlp.biu.ac.il/~danb/heb_embeds/wikipedia.alt_tok.yap_form.fasttext_skipgram.txt.gz)), [GloVe](https://nlp.biu.ac.il/~danb/heb_embeds/wikipedia.alt_tok.yap_form.glove.txt.gz), [word2vec](https://nlp.biu.ac.il/~danb/heb_embeds/wikipedia.alt_tok.yap_form.word2vec_skipgram.txt.gz)
+
+These were trained on a [2013 Wiki dump corpus by Yoav Goldberg](https://u.cs.biu.ac.il/~yogo/hebwiki/), which we re-tokenized and then re-parsed using YAP:
+1. [Space-delimited tokens](https://nlp.biu.ac.il/~danb/wiki_2013_corpus/wikipedia.alt_tok.yap_form.txt.gz)
+1. [Morphemes](https://nlp.biu.ac.il/~danb/wiki_2013_corpus/wikipedia.alt_tok.tokenized.txt.gz), automatic YAP segmentation (using the morpheme FORM)
+1. [CONLL files](https://nlp.biu.ac.il/~danb/wiki_2013_corpus/wiki_joint.tar.gz) of full morpho-syntactic output of YAP
 
 
 ## Evaluation
