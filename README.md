@@ -138,7 +138,7 @@ If you're within python, just call `ne_evaluate_mentions.evaluate_files(...)` wi
 
 ## Citations
 
-If you use the NEMO<sup>2</sup> code or the NEMO corpus, please cite the NEMO<sup>2</sup> paper:
+If you use any of the NEMO<sup>2</sup> code, models, embeddings or the NEMO corpus, please cite the NEMO<sup>2</sup> paper:
 ```bibtex
 @article{DBLP:journals/corr/abs-2007-15620,
   author    = {Dan Bareket and
