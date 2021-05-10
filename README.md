@@ -13,6 +13,7 @@ Table of Contents
 * [Training Your Own Model](#training-your-own-model)
 * [Morpheme and Word Embeddings](#morpheme-and-word-embeddings)
 * [Evaluation](#evaluation)
+* [Ben-Mordecai Corpus](#ben-mordecai-corpus)
 * [Citations](#citations)
 
 
@@ -136,6 +137,8 @@ python ne_evaluate_mentions.py <path_to_gold_ner> <path_to_predicted_ner>
 If you're within python, just call `ne_evaluate_mentions.evaluate_files(...)` with the same parameters.
 
 
+## Ben-Mordecai Corpus
+In our NEMO<sup>2</sup> paper we also evaluate our models on the [Ben-Mordecai Hebrew NER Corpus](https://www.cs.bgu.ac.il/~elhadad/nlpproj/naama/) (BMC). The 3 random splits we used can be found [here](https://github.com/OnlpLab/HebrewResources/tree/master/BMCNER). 
 ## Citations
 
 If you use any of the NEMO<sup>2</sup> code, models, embeddings or the NEMO corpus, please cite the NEMO<sup>2</sup> paper:
@@ -166,3 +169,6 @@ If you use the NEMO<sup>2</sup>'s NER models please also cite NCRF++:
  year={2018}  
 }
  ```
+ 
+
+
