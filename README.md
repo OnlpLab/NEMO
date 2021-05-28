@@ -45,8 +45,8 @@ Code and models for neural modeling of Hebrew NER. Described in the TACL paper [
 
 
 ## Basic Usage
-1. All you need to do is run `nemo.py` with specific command (scenario), with a text file of Hebrew sentences separated by a line-break as input.
-1. You can run a neural NER models directly, or choose a full end-to-end scenario that includes morphological segmentation and alignments (described fully in the [next section](#models-and-scenarios)). e.g.:
+1. All you need to do is run `nemo.py` with a specific command (scenario), on a text file of Hebrew sentences separated by a line-break.
+1. You can run a neural NER model directly, or choose a full end-to-end scenario that includes morphological segmentation and alignments (described fully in the [next section](#models-and-scenarios)). e.g.:
     * the `run_ner_model` command with the `token-single` model will tokenize sentences and run the `token-single` model: 
         - ```python nemo.py run_ner_model token-single example.txt example_output.txt```
     * the `morph_hybrid` command runs the end-to-end segmentation and NER pipeline which provided our best performing morpheme-level NER boundaries:  
