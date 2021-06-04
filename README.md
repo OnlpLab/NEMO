@@ -22,7 +22,7 @@ Code and models for neural modeling of Hebrew NER. Described in the TACL paper [
 
 
 ## Main Features
-1. Trained on the [NEMO corpus](https://github.com/OnlpLab/NEMO-Corpus) of gold annotated Modern Hebrew news articles. 
+1. Trained on the Hebrew NER and Morphology [NEMO corpus](https://github.com/OnlpLab/NEMO-Corpus) of gold annotated Modern Hebrew news articles. 
 1. Multiple modeling options to go from raw Hebrew text to morpheme and/or token-level NER boundaries.
 1. Neural model implementation of [NCRF++](https://github.com/jiesutd/NCRFpp)
 1. [bclm](https://github.com/OnlpLab/bclm) is used for reading and transforming morpho-syntactic information layers.
