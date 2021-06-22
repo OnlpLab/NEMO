@@ -15,7 +15,8 @@ def read_text_file(path):
     sents = []
     with open(path, 'r', encoding='utf8') as f:
         for line in f:
-            toks = bclm.tokenize(line.rstrip())
+            if line.strip():
+                toks = bclm.tokenize(line.rstrip())
             sents.append(toks)
     return sents
         
