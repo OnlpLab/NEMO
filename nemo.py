@@ -19,6 +19,15 @@ def read_text_file(path):
                 toks = bclm.tokenize(line.rstrip())
             sents.append(toks)
     return sents
+
+
+def tokenize_text(text):
+    sents = []
+    for line in text.split('\n'):
+        if line.strip():
+            toks = bclm.tokenize(line.rstrip())
+            sents.append(toks)
+    return sents
         
 
 def write_tokens_file(sents, file_path, dummy_o=False, only_tokens=False):
@@ -247,12 +256,15 @@ def run_ncrf_main(conf_path, device, log_path):
         print(result.stderr) 
         
 
-def run_ner_model(model_name, input_path, output_path):
+def run_ner_model(model_name, input_path, output_path, text_input=None):
     temp_input_path = os.path.join(LOCAL_TEMP_FOLDER, datetime.datetime.now().strftime('%Y%m%d%H%M%S%f')+'_run_ner_model_'+model_name+'.txt')
     temp_conf_path = temp_input_path.replace('.txt','.conf')
     temp_log_path = temp_input_path.replace('.txt','.log')
     try:
-        sents = read_text_file(input_path)
+        if text_input is not None:
+            sents = tokenize_text(text_input)
+        else:
+            sents = read_text_file(input_path)
         write_tokens_file(sents, temp_input_path, dummy_o=True)
 
         write_ncrf_conf(temp_conf_path, temp_input_path, output_path, MODEL_PATHS[model_name]['model'], MODEL_PATHS[model_name]['dset'])
