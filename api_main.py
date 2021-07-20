@@ -5,6 +5,7 @@ import os
 from config import *
 import nemo
 
+os.environ['CUDA_VISIBLE_DEVICES'] = ''
 
 ## NCRF stuff
 from utils.data import Data
@@ -17,6 +18,7 @@ def get_ncrf_data_object(model_name): #, input_path, output_path):
     model = MODEL_PATHS[model_name]
     data.dset_dir = model['dset']
     data.load(data.dset_dir)
+    data.HP_gpu = False
     #data.raw_dir = input_path
     #data.decode_dir = output_path
     data.load_model_dir = model['model']
@@ -26,7 +28,7 @@ def get_ncrf_data_object(model_name): #, input_path, output_path):
 def load_ncrf_model(data):
     model = SeqLabel(data)
     print('loading model:', data.load_model_dir)
-    model.load_state_dict(torch.load(data.load_model_dir))
+    model.load_state_dict(torch.load(data.load_model_dir, map_location=torch.device('cpu')))
     return model
 
 def ncrf_decode(model, data, temp_input):
@@ -65,7 +67,7 @@ def home():
     return {"error": "Please specify command"}
 
 @app.get("/run_nemo/")
-def run_nemo(command: str, model_name: str, sentences: str, tokenized: str = False):
+def run_nemo(command: str, model_name: str, sentences: str, tokenized: Optional[bool] = False):
     if command in available_commands:
         if command == 'run_ner_model':
             if model_name in available_models:
