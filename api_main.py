@@ -1,9 +1,13 @@
 from fastapi import FastAPI
+import pandas as pd
 from typing import Optional
 from tempfile import NamedTemporaryFile as Temp
 import os
 from config import *
 import nemo
+import requests
+import json
+import networkx as nx
 
 os.environ['CUDA_VISIBLE_DEVICES'] = ''
 
@@ -48,7 +52,83 @@ def create_input_file(text, path, tokenized):
         sents = [sent.split(' ') for sent in text.split('\n')]
     nemo.write_tokens_file(sents, path, dummy_o=True)
     return sents
+
+
+## YAP stuff
+def yap_request(route, data, yap_url=YAP_API_URL, headers=YAP_API_HEADERS):
+    return requests.get(yap_url+route, data=data, headers=headers).json()
+
+def run_yap_hebma(tokenized_sentences):
+    text = "  ".join([" ".join(sent) for sent in tokenized_sentences])
+    data = json.dumps({"text": f"{text}  "})
+    resp = yap_request('/yap/heb/ma', data)
+    return resp['ma_lattice']
     
+    
+def run_yap_md(ma_lattice):
+    data = json.dumps({'amblattice': ma_lattice})
+    resp = yap_request('/yap/heb/md', data)
+    return resp['md_lattice']
+    
+    
+def get_biose_count(ner_multi_preds):
+    bc = []
+    for i, sent in enumerate(ner_multi_preds):
+        for j, bio in enumerate(sent):
+            bc.append([i+1, j+1, bio, len(bio.split('^'))])
+
+    bc = pd.DataFrame(bc, columns=['sent_id', 'token_id', 
+                                   'biose', 'biose_count'])
+    return bc
+
+
+def prune_lattice(ma_lattice, ner_multi_preds):
+    bc = get_biose_count(ner_multi_preds)
+    lat = nemo.read_lattices(ma_lattice)
+    valid_edges = nemo.get_valid_edges(lat, bc, non_o_only=False, keep_all_if_no_valid=True)
+    cols = ['sent_id', 'token_id', 'ID1', 'ID2']
+    pruned_lat = lat[lat[cols].apply(lambda x: tuple(x), axis=1).isin(valid_edges)]
+    pruned_lat = to_lattices_str(pruned_lat)
+    # TODO: actually prune ...
+    return pruned_lat
+
+
+def to_lattices_str(df, cols = ['ID1', 'ID2', 'form', 'lemma', 'upostag', 'xpostag', 'feats', 'token_id']):
+    lat = ''
+    for _, sent in df.groupby('sent_id'):
+        for _, row in sent[cols].iterrows():
+            lat += '\t'.join(row.astype(str).tolist())+'\n'
+        lat += '\n'
+    return lat
+            
+    
+def soft_merge_bio_labels(ner_multi_preds, md_lattices):
+    #TODO: finish this
+    md_lattices = read_lattices(md_lattices)
+    
+    new_sents = []
+    for (i, mul_sent), (sent_id, md_sent) in zip(multitok_sents.iteritems(), md_lattices.iteritems()):
+        new_sent = []
+        for (form, bio), (token_id, token_str, forms) in zip(mul_sent, md_sent):
+            forms = forms.split('^')
+            bio = bio.split('^')
+            if len(forms) == len(bio):
+                new_forms = (1, list(zip(forms,bio)))
+            elif len(forms)>len(bio):
+                dif = len(forms) - len(bio)
+                new_forms = (2, list(zip(forms[:dif],['O']*dif)) + list(zip(forms[::-1], bio[::-1]))[::-1])
+            else:
+                new_forms = (3, list(zip(forms[::-1], bio[::-1]))[::-1])
+            new_sent.extend(new_forms[1])
+        new_sents.append(new_sent)
+    return new_sents
+
+
+def align_multi_md(ner_multi_preds, md_lattice):
+    #TODO: better soft alignment based on the fixed single
+    return 'TODO'
+
+
 # load all models
 available_models = ['token-single', 'token-multi', 'morph']
 loaded_models = {}
@@ -58,7 +138,7 @@ for model in available_models:
     m['model'] = load_ncrf_model(m['data'])
     loaded_models[model] = m
 
-available_commands = ['run_ner_model']
+available_commands = ['run_ner_model', 'multi_align_hybrid']
 
 app = FastAPI()
 
@@ -66,24 +146,39 @@ app = FastAPI()
 def home():
     return {"error": "Please specify command"}
 
-@app.get("/run_nemo/")
-def run_nemo(command: str, model_name: str, sentences: str, tokenized: Optional[bool] = False):
-    if command in available_commands:
-        if command == 'run_ner_model':
-            if model_name in available_models:
-                model = loaded_models[model_name]
-                with Temp() as temp_input:
-                    tok_sents = create_input_file(sentences, temp_input.name, tokenized)
-                    preds = ncrf_decode(model['model'], model['data'], temp_input.name)
-                    #output_text = temp_output.read()
-                return { 
-                    'tokenized_text': tok_sents,
-                    'nemo_predictions': preds 
-                }
-            else:
-                return {'error': f'model name "{model_name}" unavailable'}
-    else: 
-        return {'error': f'command "{command}" not supported'}
+@app.get("/run_ner_model/")
+def run_ner_model(sentences: str, model_name: str, tokenized: Optional[bool] = False):
+    if model_name in available_models:
+        model = loaded_models[model_name]
+        with Temp() as temp_input:
+            tok_sents = create_input_file(sentences, temp_input.name, tokenized)
+            preds = ncrf_decode(model['model'], model['data'], temp_input.name)
+            #output_text = temp_output.read()
+        return { 
+            'tokenized_text': tok_sents,
+            'nemo_predictions': preds 
+        }
+    else:
+        return {'error': f'model name "{model_name}" unavailable'}
+
+
+@app.get("/multi_align_hybrid/")
+def multi_align_hybrid(sentences: str, model_name: Optional[str] = 'token-multi', tokenized: Optional[bool] = False):
+    if not 'multi' in model_name:
+        return {'error': 'model must be "*multi*" for "multi_align_hybrid"'}
+    model_out = run_ner_model(sentences, model_name, tokenized)
+    tok_sents, ner_multi_preds = model_out['tokenized_text'], model_out['nemo_predictions']
+    ma_lattice = run_yap_hebma(tok_sents)
+    pruned_lattice = prune_lattice(ma_lattice, ner_multi_preds)
+    md_lattice = run_yap_md(pruned_lattice) #TODO: this should be joint, but not joint on MA in yap api
+    ner_morph_preds = align_multi_md(ner_multi_preds, md_lattice)
+    return { 
+            'tokenized_text': tok_sents,
+            'nemo_multi_predictions': ner_multi_preds,
+            'ma_lattice': ma_lattice,
+            'pruned_lattice': pruned_lattice,
+            'md_lattice': md_lattice,
+        } 
     
 # @app.get("/run_separate_nemo/")
 # def run_separate_nemo(command: str, model_name: str, sentence: str):
