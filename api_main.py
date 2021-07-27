@@ -196,7 +196,7 @@ def multi_align_hybrid(sentences: str, model_name: Optional[str] = 'token-multi'
             'ma_lattice': ma_lattice,
             'pruned_lattice': pruned_lattice,
             'md_lattice': md_lattice,
-            'morph_aligned_predictions': morph_aligned_preds,
+            'morph_aligned_multi_predictions': morph_aligned_preds,
         } 
     
     
@@ -234,9 +234,11 @@ def morph_yap(sentences: str, model_name: Optional[str] = 'morph', tokenized: Op
             'nemo_morph_predictions': morph_preds,
         } 
 
+flatten = lambda l: [item for sublist in l for item in sublist]
 
 @app.get("/morph_hybrid/")
-def morph_hybrid(sentences: str, multi_model_name: Optional[str] = 'token-multi', morph_model_name: Optional[str] = 'morph', tokenized: Optional[bool] = False):
+def morph_hybrid(sentences: str, multi_model_name: Optional[str] = 'token-multi', morph_model_name: Optional[str] = 'morph', tokenized: Optional[bool] = False,
+                align_tokens: Optional[bool] = False):
     if not 'multi' in multi_model_name:
         return {'error': 'multi model must be "*multi*" for "morph_hybrid"'}
     if not 'morph' in morph_model_name:
@@ -252,17 +254,30 @@ def morph_hybrid(sentences: str, multi_model_name: Optional[str] = 'token-multi'
     with Temp() as temp_input:
         nemo.write_tokens_file(md_sents, temp_input.name, dummy_o=True)
         morph_preds = ncrf_decode(model['model'], model['data'], temp_input.name)
+    
+    if align_tokens:
+        md_sents_for_align = (bclm.get_sentences_list(nemo.read_lattices(md_lattice), ['token_id']).apply(lambda x: [t[0] for t in x] )).to_list()
+        tok_aligned_sents = flatten([[(sent_id, m, p) for (m,p) in zip(m_sent, p_sent)] for sent_id, (m_sent, p_sent) in enumerate(zip(md_sents_for_align, morph_preds))])
+        tok_aligned_df = pd.DataFrame(tok_aligned_sents, columns=['sent_id', 'token_id', 'biose'])
+        new_toks = bclm.get_token_df(tok_aligned_df, fields=['biose'], token_fields=['sent_id', 'token_id'])
+        new_toks['fixed_bio'] = new_toks.biose.apply(lambda x: nemo.get_fixed_bio_sequence(tuple(x.split('^'))))
+        tok_aligned = (bclm.get_sentences_list(new_toks, ['fixed_bio']).apply(lambda x: [t[0] for t in x] )).to_list()
     return { 
             'tokenized_text': tok_sents,
             'nemo_multi_predictions': ner_multi_preds,
             'ma_lattice': ma_lattice,
             'pruned_lattice': pruned_lattice,
             'md_lattice': md_lattice,
-            'morph_aligned_predictions': morph_aligned_preds,
+            'morph_aligned_multi_predictions': morph_aligned_preds,
             'morph_segmented_text': md_sents,
             'nemo_morph_predictions': morph_preds,
+            'token_aligned_morph_predictions': tok_aligned,
         } 
     
+
+@app.get("/morph_hybrid_align_tokens/")
+def morph_hybrid_align_tokens(sentences: str, multi_model_name: Optional[str] = 'token-multi', morph_model_name: Optional[str] = 'morph', tokenized: Optional[bool] = False):
+    return morph_hybrid(sentences, multi_model_name, morph_model_name, tokenized, align_tokens=True)
 
 
 # @app.get("/run_separate_nemo/")
