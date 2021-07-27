@@ -235,6 +235,36 @@ def morph_yap(sentences: str, model_name: Optional[str] = 'morph', tokenized: Op
         } 
 
 
+@app.get("/morph_hybrid/")
+def morph_hybrid(sentences: str, multi_model_name: Optional[str] = 'token-multi', morph_model_name: Optional[str] = 'morph', tokenized: Optional[bool] = False):
+    if not 'multi' in multi_model_name:
+        return {'error': 'multi model must be "*multi*" for "morph_hybrid"'}
+    if not 'morph' in morph_model_name:
+        return {'error': 'morph model must be "*morph*" for "morph_hybrid"'}
+    model_out = run_ner_model(sentences, multi_model_name, tokenized)
+    tok_sents, ner_multi_preds = model_out['tokenized_text'], model_out['nemo_predictions']
+    ma_lattice = run_yap_hebma(tok_sents)
+    pruned_lattice = prune_lattice(ma_lattice, ner_multi_preds)
+    md_lattice = run_yap_md(pruned_lattice) #TODO: this should be joint, but there is currently no joint on MA in yap api
+    morph_aligned_preds = align_multi_md(ner_multi_preds, md_lattice)
+    md_sents = (bclm.get_sentences_list(nemo.read_lattices(md_lattice), ['form']).apply(lambda x: [t[0] for t in x] )).to_list()
+    model = loaded_models[morph_model_name]
+    with Temp() as temp_input:
+        nemo.write_tokens_file(md_sents, temp_input.name, dummy_o=True)
+        morph_preds = ncrf_decode(model['model'], model['data'], temp_input.name)
+    return { 
+            'tokenized_text': tok_sents,
+            'nemo_multi_predictions': ner_multi_preds,
+            'ma_lattice': ma_lattice,
+            'pruned_lattice': pruned_lattice,
+            'md_lattice': md_lattice,
+            'morph_aligned_predictions': morph_aligned_preds,
+            'morph_segmented_text': md_sents,
+            'nemo_morph_predictions': morph_preds,
+        } 
+    
+
+
 # @app.get("/run_separate_nemo/")
 # def run_separate_nemo(command: str, model_name: str, sentence: str):
 #     if command in available_commands:
