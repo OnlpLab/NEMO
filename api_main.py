@@ -18,6 +18,7 @@ import torch
 from model.seqlabel import SeqLabel
 from ncrf_main import evaluate
 
+
 def get_ncrf_data_object(model_name): #, input_path, output_path):
     data = Data()
     model = MODEL_PATHS[model_name]
@@ -30,11 +31,13 @@ def get_ncrf_data_object(model_name): #, input_path, output_path):
     data.nbest = 1
     return data
 
+
 def load_ncrf_model(data):
     model = SeqLabel(data)
     print('loading model:', data.load_model_dir)
     model.load_state_dict(torch.load(data.load_model_dir, map_location=torch.device('cpu')))
     return model
+
 
 def ncrf_decode(model, data, temp_input):
     data.raw_dir = temp_input
@@ -58,6 +61,7 @@ def create_input_file(text, path, tokenized):
 ## YAP stuff
 def yap_request(route, data, yap_url=YAP_API_URL, headers=YAP_API_HEADERS):
     return requests.get(yap_url+route, data=data, headers=headers).json()
+
 
 def run_yap_hebma(tokenized_sentences):
     text = "  ".join([" ".join(sent) for sent in tokenized_sentences])
@@ -103,7 +107,6 @@ def to_lattices_str(df, cols = ['ID1', 'ID2', 'form', 'lemma', 'upostag', 'xpost
             
     
 def soft_merge_bio_labels(ner_multi_preds, md_lattices):
-    #TODO: finish this
     multitok_sents = bclm.get_sentences_list(get_biose_count(ner_multi_preds), ['biose'])
     md_sents = bclm.get_sentences_list(bclm.get_token_df(nemo.read_lattices(md_lattices), fields=['form'], token_fields=['sent_id', 'token_id'], add_set=False), ['token_id', 'form'])
     new_sents = []
@@ -140,11 +143,14 @@ for model in available_models:
 
 available_commands = ['run_ner_model', 'multi_align_hybrid']
 
+
 app = FastAPI()
+
 
 @app.get("/")
 def home():
     return {"error": "Please specify command"}
+
 
 @app.get("/run_ner_model/")
 def run_ner_model(sentences: str, model_name: str, tokenized: Optional[bool] = False):
@@ -153,7 +159,6 @@ def run_ner_model(sentences: str, model_name: str, tokenized: Optional[bool] = F
         with Temp() as temp_input:
             tok_sents = create_input_file(sentences, temp_input.name, tokenized)
             preds = ncrf_decode(model['model'], model['data'], temp_input.name)
-            #output_text = temp_output.read()
         return { 
             'tokenized_text': tok_sents,
             'nemo_predictions': preds 
@@ -170,7 +175,7 @@ def multi_align_hybrid(sentences: str, model_name: Optional[str] = 'token-multi'
     tok_sents, ner_multi_preds = model_out['tokenized_text'], model_out['nemo_predictions']
     ma_lattice = run_yap_hebma(tok_sents)
     pruned_lattice = prune_lattice(ma_lattice, ner_multi_preds)
-    md_lattice = run_yap_md(pruned_lattice) #TODO: this should be joint, but not joint on MA in yap api
+    md_lattice = run_yap_md(pruned_lattice) #TODO: this should be joint, but there is currently no joint on MA in yap api
     morph_aligned_preds = align_multi_md(ner_multi_preds, md_lattice)
     return { 
             'tokenized_text': tok_sents,
@@ -180,6 +185,8 @@ def multi_align_hybrid(sentences: str, model_name: Optional[str] = 'token-multi'
             'md_lattice': md_lattice,
             'morph_aligned_predictions': morph_aligned_preds,
         } 
+    
+    
     
 # @app.get("/run_separate_nemo/")
 # def run_separate_nemo(command: str, model_name: str, sentence: str):
