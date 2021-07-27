@@ -8,6 +8,7 @@ import nemo
 import requests
 import json
 import networkx as nx
+import bclm
 
 os.environ['CUDA_VISIBLE_DEVICES'] = ''
 
@@ -89,7 +90,6 @@ def prune_lattice(ma_lattice, ner_multi_preds):
     cols = ['sent_id', 'token_id', 'ID1', 'ID2']
     pruned_lat = lat[lat[cols].apply(lambda x: tuple(x), axis=1).isin(valid_edges)]
     pruned_lat = to_lattices_str(pruned_lat)
-    # TODO: actually prune ...
     return pruned_lat
 
 
@@ -104,12 +104,12 @@ def to_lattices_str(df, cols = ['ID1', 'ID2', 'form', 'lemma', 'upostag', 'xpost
     
 def soft_merge_bio_labels(ner_multi_preds, md_lattices):
     #TODO: finish this
-    md_lattices = read_lattices(md_lattices)
-    
+    multitok_sents = bclm.get_sentences_list(get_biose_count(ner_multi_preds), ['biose'])
+    md_sents = bclm.get_sentences_list(bclm.get_token_df(nemo.read_lattices(md_lattices), fields=['form'], token_fields=['sent_id', 'token_id'], add_set=False), ['token_id', 'form'])
     new_sents = []
-    for (i, mul_sent), (sent_id, md_sent) in zip(multitok_sents.iteritems(), md_lattices.iteritems()):
+    for (i, mul_sent), (sent_id, md_sent) in zip(multitok_sents.iteritems(), md_sents.iteritems()):
         new_sent = []
-        for (form, bio), (token_id, token_str, forms) in zip(mul_sent, md_sent):
+        for (bio,), (token_id, forms) in zip(mul_sent, md_sent):
             forms = forms.split('^')
             bio = bio.split('^')
             if len(forms) == len(bio):
@@ -125,8 +125,8 @@ def soft_merge_bio_labels(ner_multi_preds, md_lattices):
 
 
 def align_multi_md(ner_multi_preds, md_lattice):
-    #TODO: better soft alignment based on the fixed single
-    return 'TODO'
+    aligned_sents = soft_merge_bio_labels(ner_multi_preds, md_lattice) 
+    return aligned_sents
 
 
 # load all models
@@ -171,13 +171,14 @@ def multi_align_hybrid(sentences: str, model_name: Optional[str] = 'token-multi'
     ma_lattice = run_yap_hebma(tok_sents)
     pruned_lattice = prune_lattice(ma_lattice, ner_multi_preds)
     md_lattice = run_yap_md(pruned_lattice) #TODO: this should be joint, but not joint on MA in yap api
-    ner_morph_preds = align_multi_md(ner_multi_preds, md_lattice)
+    morph_aligned_preds = align_multi_md(ner_multi_preds, md_lattice)
     return { 
             'tokenized_text': tok_sents,
             'nemo_multi_predictions': ner_multi_preds,
             'ma_lattice': ma_lattice,
             'pruned_lattice': pruned_lattice,
             'md_lattice': md_lattice,
+            'morph_aligned_predictions': morph_aligned_preds,
         } 
     
 # @app.get("/run_separate_nemo/")
