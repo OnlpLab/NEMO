@@ -50,11 +50,16 @@ def ncrf_decode(model, data, temp_input):
     return preds
     
     
-def create_input_file(text, path, tokenized):
+def get_sents(text, tokenized):
     if not tokenized:
         sents = nemo.tokenize_text(text)
     else:
         sents = [sent.split(' ') for sent in text.split('\n')]
+    return sents
+    
+    
+def create_input_file(text, path, tokenized):
+    sents = get_sents(text, tokenized)
     nemo.write_tokens_file(sents, path, dummy_o=True)
     return sents
 
@@ -75,6 +80,13 @@ def run_yap_md(ma_lattice):
     data = json.dumps({'amblattice': ma_lattice})
     resp = yap_request('/yap/heb/md', data)
     return resp['md_lattice']
+    
+    
+def run_yap_joint(tokenized_sentences):
+    text = "  ".join([" ".join(sent) for sent in tokenized_sentences])
+    data = json.dumps({"text": f"{text}  "})
+    resp = yap_request('/yap/heb/joint', data)
+    return resp
     
     
 def get_biose_count(ner_multi_preds):
@@ -201,6 +213,26 @@ def multi_to_single(sentences: str, model_name: Optional[str] = 'token-multi', t
             'single_predictions': ner_single_preds,
         } 
 
+
+@app.get("/morph_yap/")
+def morph_yap(sentences: str, model_name: Optional[str] = 'morph', tokenized: Optional[bool] = False):
+    if not 'morph' in model_name:
+        return {'error': 'model must be "*morph*" for "morph_yap"'}
+    tok_sents = get_sents(sentences, tokenized)
+    yap_out = run_yap_joint(tok_sents)
+    md_sents = (bclm.get_sentences_list(nemo.read_lattices(yap_out['md_lattice']), ['form']).apply(lambda x: [t[0] for t in x] )).to_list()
+    model = loaded_models[model_name]
+    with Temp() as temp_input:
+        nemo.write_tokens_file(md_sents, temp_input.name, dummy_o=True)
+        morph_preds = ncrf_decode(model['model'], model['data'], temp_input.name)
+    return { 
+            'tokenized_text': tok_sents,
+            'ma_lattice': yap_out['ma_lattice'],
+            'md_lattice': yap_out['md_lattice'],
+            'dep_tree': yap_out['dep_tree'],
+            'morph_segmented_text': md_sents,
+            'nemo_morph_predictions': morph_preds,
+        } 
 
 
 # @app.get("/run_separate_nemo/")
