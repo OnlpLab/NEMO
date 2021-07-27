@@ -9,6 +9,7 @@ import requests
 import json
 import networkx as nx
 import bclm
+from ne_evaluate_mentions import fix_multi_biose
 
 os.environ['CUDA_VISIBLE_DEVICES'] = ''
 
@@ -187,7 +188,21 @@ def multi_align_hybrid(sentences: str, model_name: Optional[str] = 'token-multi'
         } 
     
     
-    
+@app.get("/multi_to_single/")
+def multi_to_single(sentences: str, model_name: Optional[str] = 'token-multi', tokenized: Optional[bool] = False):
+    if not 'multi' in model_name:
+        return {'error': 'model must be "*multi*" for "multi_to_single"'}
+    model_out = run_ner_model(sentences, model_name, tokenized)
+    tok_sents, ner_multi_preds = model_out['tokenized_text'], model_out['nemo_predictions']
+    ner_single_preds = [[fix_multi_biose(label) for label in sent] for sent in ner_multi_preds]
+    return { 
+            'tokenized_text': tok_sents,
+            'nemo_multi_predictions': ner_multi_preds,
+            'single_predictions': ner_single_preds,
+        } 
+
+
+
 # @app.get("/run_separate_nemo/")
 # def run_separate_nemo(command: str, model_name: str, sentence: str):
 #     if command in available_commands:
