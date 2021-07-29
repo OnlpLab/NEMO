@@ -153,9 +153,7 @@ for model in available_models:
     m['data'] = get_ncrf_data_object(model)
     m['model'] = load_ncrf_model(m['data'])
     loaded_models[model] = m
-
-available_commands = ['run_ner_model', 'multi_align_hybrid']
-
+    
 
 app = FastAPI()
 
@@ -282,6 +280,8 @@ def morph_hybrid_align_tokens(sentences: str, multi_model_name: Optional[str] = 
     return morph_hybrid(sentences, multi_model_name, morph_model_name, tokenized, align_tokens=True)
 
 
+# available_commands = ['run_ner_model', 'multi_align_hybrid']
+#
 # @app.get("/run_separate_nemo/")
 # def run_separate_nemo(command: str, model_name: str, sentence: str):
 #     if command in available_commands:
