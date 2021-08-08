@@ -142,7 +142,8 @@ def soft_merge_bio_labels(ner_multi_preds, md_lattices):
 
 def align_multi_md(ner_multi_preds, md_lattice):
     aligned_sents = soft_merge_bio_labels(ner_multi_preds, md_lattice) 
-    return aligned_sents
+    labels = [[t[1] for t in sent] for sent in aligned_sents]
+    return labels
 
 
 # load all models
