@@ -188,6 +188,7 @@ def multi_align_hybrid(sentences: str, model_name: Optional[str] = 'token-multi'
     ma_lattice = run_yap_hebma(tok_sents)
     pruned_lattice = prune_lattice(ma_lattice, ner_multi_preds)
     md_lattice = run_yap_md(pruned_lattice) #TODO: this should be joint, but there is currently no joint on MA in yap api
+    md_sents = (bclm.get_sentences_list(nemo.read_lattices(md_lattice), ['form']).apply(lambda x: [t[0] for t in x] )).to_list()
     morph_aligned_preds = align_multi_md(ner_multi_preds, md_lattice)
     return { 
             'tokenized_text': tok_sents,
@@ -195,6 +196,7 @@ def multi_align_hybrid(sentences: str, model_name: Optional[str] = 'token-multi'
             'ma_lattice': ma_lattice,
             'pruned_lattice': pruned_lattice,
             'md_lattice': md_lattice,
+            'morph_segmented_text': md_sents,
             'morph_aligned_multi_predictions': morph_aligned_preds,
         } 
     
@@ -259,8 +261,8 @@ def morph_hybrid(sentences: str, multi_model_name: Optional[str] = 'token-multi'
             'ma_lattice': ma_lattice,
             'pruned_lattice': pruned_lattice,
             'md_lattice': md_lattice,
-            'morph_aligned_multi_predictions': morph_aligned_preds,
             'morph_segmented_text': md_sents,
+            'morph_aligned_multi_predictions': morph_aligned_preds,
             'nemo_morph_predictions': morph_preds,
         } 
     
