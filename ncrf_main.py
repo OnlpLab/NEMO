@@ -180,7 +180,7 @@ def evaluate(data, model, name, nbest=None):
         gold_results += gold_label
     decode_time = time.time() - start_time
     speed = len(instances)/decode_time
-    acc, p, r, f = get_ner_fmeasure(gold_results, pred_results, data.tagScheme)
+    acc, p, r, f = get_ner_fmeasure(gold_results, pred_results, data.tagScheme, verbose=False)
     if nbest and not data.sentence_classification:
         return speed, acc, p, r, f, nbest_pred_results, pred_scores
     return speed, acc, p, r, f, pred_results, pred_scores

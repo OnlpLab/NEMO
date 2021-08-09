@@ -12,7 +12,7 @@ import sys
 
 
 ## input as sentence level labels
-def get_ner_fmeasure(golden_lists, predict_lists, label_type="BMES"):
+def get_ner_fmeasure(golden_lists, predict_lists, label_type="BMES", verbose=True):
     sent_num = len(golden_lists)
     golden_full = []
     predict_full = []
@@ -56,10 +56,11 @@ def get_ner_fmeasure(golden_lists, predict_lists, label_type="BMES"):
         f_measure = 2*precision*recall/(precision+recall)
     accuracy = (right_tag+0.0)/all_tag
     # print "Accuracy: ", right_tag,"/",all_tag,"=",accuracy
-    if  label_type.upper().startswith("B-"):
-        print("gold_num = ", golden_num, " pred_num = ", predict_num, " right_num = ", right_num)
-    else:
-        print("Right token = ", right_tag, " All token = ", all_tag, " acc = ", accuracy)
+    if verbose:
+        if  label_type.upper().startswith("B-"):
+            print("gold_num = ", golden_num, " pred_num = ", predict_num, " right_num = ", right_num)
+        else:
+            print("Right token = ", right_tag, " All token = ", all_tag, " acc = ", accuracy)
     return accuracy, precision, recall, f_measure
 
 
