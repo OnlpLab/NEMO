@@ -23,7 +23,7 @@ class SeqLabel(nn.Module):
         print("word feature extractor: ", data.word_feature_extractor)
         print("use crf: ", self.use_crf)
 
-        self.gpu = data.HP_gpu
+        self.gpu = torch.cuda.is_available() #data.HP_gpu
         self.average_batch = data.average_batch_loss
         ## add two more label for downlayer lstm, use original label size for CRF
         label_size = data.label_alphabet_size

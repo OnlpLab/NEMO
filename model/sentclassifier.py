@@ -20,7 +20,7 @@ class SentClassifier(nn.Module):
             print("char feature extractor: ", data.char_feature_extractor)
         print("word feature extractor: ", data.word_feature_extractor)
 
-        self.gpu = data.HP_gpu
+        self.gpu = torch.cuda.is_available()
         self.average_batch = data.average_batch_loss
         label_size = data.label_alphabet_size
         self.word_hidden = WordSequence(data)

@@ -164,7 +164,7 @@ def evaluate(data, model, name, nbest=None):
         instance = instances[start:end]
         if not instance:
             continue
-        batch_word, batch_features, batch_wordlen, batch_wordrecover, batch_char, batch_charlen, batch_charrecover, batch_label, mask  = batchify_with_label(instance, data.HP_gpu, False, data.sentence_classification)
+        batch_word, batch_features, batch_wordlen, batch_wordrecover, batch_char, batch_charlen, batch_charrecover, batch_label, mask  = batchify_with_label(instance, torch.cuda.is_available(), False, data.sentence_classification)
         if nbest and not data.sentence_classification:
             scores, nbest_tag_seq = model.decode_nbest(batch_word,batch_features, batch_wordlen, batch_char, batch_charlen, batch_charrecover, mask, nbest)
             nbest_pred_result = recover_nbest_label(nbest_tag_seq, mask, data.label_alphabet, batch_wordrecover)
@@ -258,6 +258,7 @@ def batchify_sequence_labeling_with_label(input_batch_list, gpu, if_train=True):
     char_seq_tensor = char_seq_tensor[char_perm_idx]
     _, char_seq_recover = char_perm_idx.sort(0, descending=False)
     _, word_seq_recover = word_perm_idx.sort(0, descending=False)
+
     if gpu:
         word_seq_tensor = word_seq_tensor.cuda()
         for idx in range(feature_num):
@@ -268,6 +269,16 @@ def batchify_sequence_labeling_with_label(input_batch_list, gpu, if_train=True):
         char_seq_tensor = char_seq_tensor.cuda()
         char_seq_recover = char_seq_recover.cuda()
         mask = mask.cuda()
+    else:
+        word_seq_tensor = word_seq_tensor.cpu()
+        for idx in range(feature_num):
+            feature_seq_tensors[idx] = feature_seq_tensors[idx].cpu()
+        word_seq_lengths = word_seq_lengths.cpu()
+        word_seq_recover = word_seq_recover.cpu()
+        label_seq_tensor = label_seq_tensor.cpu()
+        char_seq_tensor = char_seq_tensor.cpu()
+        char_seq_recover = char_seq_recover.cpu()
+        mask = mask.cpu()
     return word_seq_tensor,feature_seq_tensors, word_seq_lengths, word_seq_recover, char_seq_tensor, char_seq_lengths, char_seq_recover, label_seq_tensor, mask
 
 
@@ -347,6 +358,16 @@ def batchify_sentence_classification_with_label(input_batch_list, gpu, if_train=
         char_seq_tensor = char_seq_tensor.cuda()
         char_seq_recover = char_seq_recover.cuda()
         mask = mask.cuda()
+    else:
+        word_seq_tensor = word_seq_tensor.cpu()
+        for idx in range(feature_num):
+            feature_seq_tensors[idx] = feature_seq_tensors[idx].cpu()
+        word_seq_lengths = word_seq_lengths.cpu()
+        word_seq_recover = word_seq_recover.cpu()
+        label_seq_tensor = label_seq_tensor.cpu()
+        char_seq_tensor = char_seq_tensor.cpu()
+        char_seq_recover = char_seq_recover.cpu()
+        mask = mask.cpu()
     return word_seq_tensor,feature_seq_tensors, word_seq_lengths, word_seq_recover, char_seq_tensor, char_seq_lengths, char_seq_recover, label_seq_tensor, mask
 
 
@@ -407,7 +428,7 @@ def train(data):
             instance = data.train_Ids[start:end]
             if not instance:
                 continue
-            batch_word, batch_features, batch_wordlen, batch_wordrecover, batch_char, batch_charlen, batch_charrecover, batch_label, mask  = batchify_with_label(instance, data.HP_gpu, True, data.sentence_classification)
+            batch_word, batch_features, batch_wordlen, batch_wordrecover, batch_char, batch_charlen, batch_charrecover, batch_label, mask  = batchify_with_label(instance, torch.cuda.is_available(), True, data.sentence_classification)
             instance_count += 1
             loss, tag_seq = model.calculate_loss(batch_word, batch_features, batch_wordlen, batch_char, batch_charlen, batch_charrecover, batch_label, mask)
             right, whole = predict_check(tag_seq, batch_label, mask, data.sentence_classification)
@@ -487,7 +508,7 @@ def load_model_decode(data, name):
     # else:
     #     model.load_state_dict(torch.load(model_dir))
     #     # model = torch.load(model_dir)
-    model.load_state_dict(torch.load(data.load_model_dir))
+    model.load_state_dict(torch.load(data.load_model_dir, map_location=torch.device('cpu')))
 
     print("Decode %s data, nbest: %s ..."%(name, data.nbest))
     start_time = time.time()
@@ -546,7 +567,8 @@ if __name__ == '__main__':
     
     if data.HP_gpu:
         torch.cuda.set_device(int(args.device))
-        
+
+
     status = data.status.lower()
     
     print("Seed num:",seed_num)

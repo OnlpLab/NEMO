@@ -31,7 +31,7 @@ class CRF(nn.Module):
     def __init__(self, tagset_size, gpu):
         super(CRF, self).__init__()
         print("build CRF...")
-        self.gpu = gpu
+        self.gpu = torch.cuda.is_available()
         # Matrix of transition parameters.  Entry i,j is the score of transitioning from i to j.
         self.tagset_size = tagset_size
         # # We add 2 here, because of START_TAG and STOP_TAG
@@ -43,6 +43,8 @@ class CRF(nn.Module):
         init_transitions[0,:] = -10000.0
         if self.gpu:
             init_transitions = init_transitions.cuda()
+        else:
+            init_transitions = init_transitions.cpu()
         self.transitions = nn.Parameter(init_transitions)
 
         # self.transitions = nn.Parameter(torch.Tensor(self.tagset_size+2, self.tagset_size+2))
@@ -170,6 +172,8 @@ class CRF(nn.Module):
         pad_zero = autograd.Variable(torch.zeros(batch_size, tag_size)).long()
         if self.gpu:
             pad_zero = pad_zero.cuda()
+        else:
+            pad_zero = pad_zero.cpu()
         back_points.append(pad_zero)
         back_points  =  torch.cat(back_points).view(seq_len, batch_size, tag_size)
 
@@ -188,6 +192,8 @@ class CRF(nn.Module):
         decode_idx = autograd.Variable(torch.LongTensor(seq_len, batch_size))
         if self.gpu:
             decode_idx = decode_idx.cuda()
+        else:
+            decode_idx = decode_idx.cpu()
         decode_idx[-1] = pointer.detach()
         for idx in range(len(back_points)-2, -1, -1):
             pointer = torch.gather(back_points[idx], 1, pointer.contiguous().view(batch_size, 1))
@@ -220,6 +226,8 @@ class CRF(nn.Module):
         new_tags = autograd.Variable(torch.LongTensor(batch_size, seq_len))
         if self.gpu:
             new_tags = new_tags.cuda()
+        else:
+            new_tags = new_tags.cpu()
         for idx in range(seq_len):
             if idx == 0:
                 ## start -> first score
@@ -351,6 +359,8 @@ class CRF(nn.Module):
         pad_zero = autograd.Variable(torch.zeros(batch_size, tag_size, nbest)).long()
         if self.gpu:
             pad_zero = pad_zero.cuda()
+        else:
+            pad_zero = pad_zero.cpu()
         back_points.append(pad_zero)
         back_points = torch.cat(back_points).view(seq_len, batch_size, tag_size, nbest)
 
@@ -384,6 +394,8 @@ class CRF(nn.Module):
         decode_idx = autograd.Variable(torch.LongTensor(seq_len, batch_size, nbest))
         if self.gpu:
             decode_idx = decode_idx.cuda()
+        else:
+            decode_idx = decode_idx.cpu()
         decode_idx[-1] = pointer.data/nbest
         # print "pointer-1:",pointer[2]
         # exit(0)

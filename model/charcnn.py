@@ -13,7 +13,7 @@ class CharCNN(nn.Module):
     def __init__(self, alphabet_size, pretrain_char_embedding, embedding_dim, hidden_dim, dropout, gpu, kernel_size):
         super(CharCNN, self).__init__()
         print("build char sequence feature extractor: CNN ...")
-        self.gpu = gpu
+        self.gpu = torch.cuda.is_available()
         self.hidden_dim = hidden_dim
         self.char_drop = nn.Dropout(dropout)
         self.char_embeddings = nn.Embedding(alphabet_size, embedding_dim)
@@ -27,6 +27,10 @@ class CharCNN(nn.Module):
             self.char_drop = self.char_drop.cuda()
             self.char_embeddings = self.char_embeddings.cuda()
             self.char_cnn = self.char_cnn.cuda()
+        else:
+            self.char_drop = self.char_drop.cpu()
+            self.char_embeddings = self.char_embeddings.cpu()
+            self.char_cnn = self.char_cnn.cpu()
 
 
     def random_embedding(self, vocab_size, embedding_dim):

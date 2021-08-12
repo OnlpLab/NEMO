@@ -222,29 +222,35 @@ def get_fixed_tok(path, orig_sents):
 
 def run_yap_hebma(tokens_path, output_path, log_path):
     result = subprocess.run([YAP_PATH, 'hebma', '-raw', tokens_path, 
-                    '-out', output_path], capture_output=True)
+                    '-out', output_path]) #, capture_output=True)
     with open(log_path, 'wb') as of:
-        of.write(result.stdout)
-    if len(result.stderr)>0:
-        print(result.stderr) 
+        if result.stdout != None:
+            of.write(result.stdout)
+    if result.stderr != None:
+        if len(result.stderr)>0:
+            print(result.stderr) 
 
         
 def run_yap_joint(lattices_path, seg_path, map_path, conll_path, log_path):
     result = subprocess.run([YAP_PATH, 'joint', '-in', lattices_path, 
-                    '-os', seg_path, '-om', map_path, '-oc', conll_path], capture_output=True)
+                    '-os', seg_path, '-om', map_path, '-oc', conll_path]) #, capture_output=True)
     with open(log_path, 'wb') as of:
-        of.write(result.stdout)
-    if len(result.stderr)>0:
-        print(result.stderr) 
+        if result.stdout != None:
+            of.write(result.stdout)
+    if result.stderr != None:
+        if len(result.stderr)>0:
+            print(result.stderr) 
         
         
 def run_ncrf_main(conf_path, device, log_path):
-    result = subprocess.run(['python', 'ncrf_main.py', '--config', conf_path, 
-                             '--device', str(device)], capture_output=True)
+    result = subprocess.run(['python3', 'ncrf_main.py', '--config', conf_path, 
+                             '--device', str(device)]) # , capture_output=True)
     with open(log_path, 'wb') as of:
-        of.write(result.stdout)
-    if len(result.stderr)>0:
-        print(result.stderr) 
+        if result.stdout != None:
+            of.write(result.stdout)
+    if result.stderr != None:
+        if len(result.stderr)>0:
+            print(result.stderr) 
         
 
 def run_ner_model(model_name, input_path, output_path):

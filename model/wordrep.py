@@ -16,7 +16,7 @@ class WordRep(nn.Module):
     def __init__(self, data):
         super(WordRep, self).__init__()
         print("build word representation...")
-        self.gpu = data.HP_gpu
+        self.gpu = torch.cuda.is_available() #data.HP_gpu
         self.use_char = data.use_char
         self.batch_size = data.HP_batch_size
         self.char_hidden_dim = 0
@@ -63,7 +63,11 @@ class WordRep(nn.Module):
             self.word_embedding = self.word_embedding.cuda()
             for idx in range(self.feature_num):
                 self.feature_embeddings[idx] = self.feature_embeddings[idx].cuda()
-
+        else:
+            self.drop = self.drop.cpu()
+            self.word_embedding = self.word_embedding.cpu()
+            for idx in range(self.feature_num):
+                self.feature_embeddings[idx] = self.feature_embeddings[idx].cpu()
 
 
     def random_embedding(self, vocab_size, embedding_dim):

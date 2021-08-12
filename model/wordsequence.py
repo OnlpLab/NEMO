@@ -15,7 +15,7 @@ class WordSequence(nn.Module):
     def __init__(self, data):
         super(WordSequence, self).__init__()
         print("build word sequence feature extractor: %s..."%(data.word_feature_extractor))
-        self.gpu = data.HP_gpu
+        self.gpu = torch.cuda.is_available() #data.HP_gpu
         self.use_char = data.use_char
         # self.batch_size = data.HP_batch_size
         # self.hidden_dim = data.HP_hidden_dim
@@ -71,6 +71,17 @@ class WordSequence(nn.Module):
                     self.cnn_batchnorm_list[idx] = self.cnn_batchnorm_list[idx].cuda()
             else:
                 self.lstm = self.lstm.cuda()
+        else:
+            self.droplstm = self.droplstm.cpu()
+            self.hidden2tag = self.hidden2tag.cpu()
+            if self.word_feature_extractor == "CNN":
+                self.word2cnn = self.word2cnn.cpu()
+                for idx in range(self.cnn_layer):
+                    self.cnn_list[idx] = self.cnn_list[idx].cpu()
+                    self.cnn_drop_list[idx] = self.cnn_drop_list[idx].cpu()
+                    self.cnn_batchnorm_list[idx] = self.cnn_batchnorm_list[idx].cpu()
+            else:
+                self.lstm = self.lstm.cpu()
 
 
     def forward(self, word_inputs, feature_inputs, word_seq_lengths, char_inputs, char_seq_lengths, char_seq_recover):
