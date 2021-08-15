@@ -7,6 +7,7 @@ import sys
 import networkx as nx
 import traceback
 import re
+from io import StringIO 
 
 from config import *
 from ne_evaluate_mentions import fix_multi_biose, read_file_sents
@@ -19,7 +20,29 @@ def read_text_file(path):
                 toks = bclm.tokenize(line.rstrip())
                 sents.append(toks)
     return sents
+
+
+def tokenize_text(text):
+    sents = []
+    for line in text.split('\n'):
+        if line.strip():
+            toks = bclm.tokenize(line.rstrip())
+            sents.append(toks)
+    return sents
         
+def read_lattice(lattice):
+    df = pd.read_csv(StringIO(lattice), sep='\t', header=None, quoting=3, 
+                               names = ['ID1', 'ID2', 'form', 'lemma', 'upostag', 'xpostag', 'feats', 'token_id'])
+    return df
+
+
+def read_lattices(lattices):
+    dfs = []
+    for i, sent in enumerate(lattices.split('\n\n')):
+        dfs.append(read_lattice(sent).assign(sent_id = i+1))
+    
+    return pd.concat(dfs).reset_index(drop=True)
+
 
 def write_tokens_file(sents, file_path, dummy_o=False, only_tokens=False):
     with open(file_path, 'w', encoding='utf8') as of:
@@ -247,12 +270,15 @@ def run_ncrf_main(conf_path, device, log_path):
         print(result.stderr) 
         
 
-def run_ner_model(model_name, input_path, output_path):
+def run_ner_model(model_name, input_path, output_path, text_input=None):
     temp_input_path = os.path.join(LOCAL_TEMP_FOLDER, datetime.datetime.now().strftime('%Y%m%d%H%M%S%f')+'_run_ner_model_'+model_name+'.txt')
     temp_conf_path = temp_input_path.replace('.txt','.conf')
     temp_log_path = temp_input_path.replace('.txt','.log')
     try:
-        sents = read_text_file(input_path)
+        if text_input is not None:
+            sents = tokenize_text(text_input)
+        else:
+            sents = read_text_file(input_path)
         write_tokens_file(sents, temp_input_path, dummy_o=True)
 
         write_ncrf_conf(temp_conf_path, temp_input_path, output_path, MODEL_PATHS[model_name]['model'], MODEL_PATHS[model_name]['dset'])

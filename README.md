@@ -5,7 +5,6 @@ Table of Contents
 =================
 * [Introduction](#introduction)
 * [Main Features](#main-features)
-* [Requirements](#requirements)
 * [Setup](#setup)
 * [Basic Usage](#basic-usage)
 * [Models and Scenarios](#models-and-scenarios)
@@ -28,20 +27,24 @@ Code and models for neural modeling of Hebrew NER. Described in the TACL paper [
 1. [bclm](https://github.com/OnlpLab/bclm) is used for reading and transforming morpho-syntactic information layers.
 
 
-## Requirements
-1. `python>=3.6`
-1. `torch=1.0`
-1. `networkx`
-1. `yap`: https://github.com/OnlpLab/yap (don't forget `export GOPATH=</path/to/yapproj>`)
-1. `bclm>=1.0.0`: http://github.com/OnlpLab/bclm 
-
-
 ## Setup
-1. Install all requirements, preferably in a virtual env.
-1. Clone the repo.
-1. Change to the repo directory: `cd NEMO`
+### Pre-requisites:
+
+1. Preferably in a virtual env: `pip install -r requirements.txt`
+   1. Install `bclm>=1.0.0`: http://github.com/OnlpLab/bclm (this step will be spared soon when bclm is added to pip)
+1. Install `yap`: https://github.com/OnlpLab/yap
+1. Clone this NEMO repo: `git clone https://github.com/OnlpLab/NEMO.git`
+1. Enter the repo directory: `cd NEMO`
 1. Unpack model files: `gunzip data/*.gz`
+
+### To run on file input (CLI): `nemo.py`
 1. Change `YAP_PATH` in `config.py` to the path of your local `yap` executable.
+
+### To run API server:
+1. Run YAP API server `./yap api` (if you specify a port, change it in `config.py`)
+1. Run NEMO API server `uvicorn api_main:app --reload --port 8090`
+1. You can find the available API endpoints with usage examples in [api_usage.ipynb](./api/api_usage.ipynb).
+1. You can also check out the API opening [http://localhost:8090/docs].
 
 
 ## Basic Usage
