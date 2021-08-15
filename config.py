@@ -1,6 +1,6 @@
 DEVICE = 3
 LOCAL_TEMP_FOLDER = 'temp'
-DELETE_TEMP_FILES = False
+DELETE_TEMP_FILES = True
 
 MODEL_PATHS = {
     'token-single_oov': { 'model': 'data/token.char_lstm.ft_oov_tok.44_seed.146.model',
@@ -20,4 +20,6 @@ MULTI_MODEL_FOR_HYBRID = 'token-multi'
 
 YAP_PATH = '../yapproj/src/yap/yap'
 
+YAP_API_URL = 'http://localhost:8000'
 
+YAP_API_HEADERS = {'content-type': 'application/json'}
