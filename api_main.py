@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 import pandas as pd
 from typing import Optional
-from tempfile import NamedTemporaryFile as Temp
+from tempfile import mkstemp
+import atexit
 import os
 from config import *
 import nemo
@@ -144,6 +145,28 @@ def align_multi_md(ner_multi_preds, md_lattice):
     aligned_sents = soft_merge_bio_labels(ner_multi_preds, md_lattice) 
     labels = [[t[1] for t in sent] for sent in aligned_sents]
     return labels
+    
+    
+def temporary_filename(suffix='tmp', dir=None, text=False, remove_on_exit=True):
+    """Returns a temporary filename that, like mkstemp(3), will be secure in
+    its creation.  The file will be closed immediately after it's created, so
+    you are expected to open it afterwards to do what you wish.  The file
+    will be removed on exit unless you pass removeOnExit=False.  (You'd think
+    that amongst the myriad of methods in the tempfile module, there'd be
+    something like this, right?  Nope.)"""
+    
+    
+    (fileHandle, path) = mkstemp(suffix=suffix, dir=dir, text=text)
+    os.close(fileHandle)
+
+    def remove_file(path):
+        os.remove(path)
+        logging.debug('temporaryFilename: rm -f %s' % path)
+
+    if remove_on_exit:
+        atexit.register(remove_file, path)
+
+    return path
 
 
 # load all models
@@ -168,9 +191,9 @@ def home():
 def run_ner_model(sentences: str, model_name: str, tokenized: Optional[bool] = False):
     if model_name in available_models:
         model = loaded_models[model_name]
-        with Temp() as temp_input:
-            tok_sents = create_input_file(sentences, temp_input.name, tokenized)
-            preds = ncrf_decode(model['model'], model['data'], temp_input.name)
+        temp_input = temporary_filename()
+        tok_sents = create_input_file(sentences, temp_input, tokenized)
+        preds = ncrf_decode(model['model'], model['data'], temp_input)
         return { 
             'tokenized_text': tok_sents,
             'nemo_predictions': preds 
@@ -223,9 +246,9 @@ def morph_yap(sentences: str, model_name: Optional[str] = 'morph', tokenized: Op
     yap_out = run_yap_joint(tok_sents)
     md_sents = (bclm.get_sentences_list(nemo.read_lattices(yap_out['md_lattice']), ['form']).apply(lambda x: [t[0] for t in x] )).to_list()
     model = loaded_models[model_name]
-    with Temp() as temp_input:
-        nemo.write_tokens_file(md_sents, temp_input.name, dummy_o=True)
-        morph_preds = ncrf_decode(model['model'], model['data'], temp_input.name)
+    temp_input = temporary_filename()
+    nemo.write_tokens_file(md_sents, temp_input, dummy_o=True)
+    morph_preds = ncrf_decode(model['model'], model['data'], temp_input)
     return { 
             'tokenized_text': tok_sents,
             'ma_lattice': yap_out['ma_lattice'],
@@ -252,9 +275,9 @@ def morph_hybrid(sentences: str, multi_model_name: Optional[str] = 'token-multi'
     morph_aligned_preds = align_multi_md(ner_multi_preds, md_lattice)
     md_sents = (bclm.get_sentences_list(nemo.read_lattices(md_lattice), ['form']).apply(lambda x: [t[0] for t in x] )).to_list()
     model = loaded_models[morph_model_name]
-    with Temp() as temp_input:
-        nemo.write_tokens_file(md_sents, temp_input.name, dummy_o=True)
-        morph_preds = ncrf_decode(model['model'], model['data'], temp_input.name)
+    temp_input = temporary_filename()
+    nemo.write_tokens_file(md_sents, temp_input, dummy_o=True)
+    morph_preds = ncrf_decode(model['model'], model['data'], temp_input)
     resp = { 
             'tokenized_text': tok_sents,
             'nemo_multi_predictions': ner_multi_preds,
