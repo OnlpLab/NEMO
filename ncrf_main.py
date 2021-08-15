@@ -487,8 +487,11 @@ def load_model_decode(data, name):
     # else:
     #     model.load_state_dict(torch.load(model_dir))
     #     # model = torch.load(model_dir)
-    model.load_state_dict(torch.load(data.load_model_dir))
-
+    if data.HP_gpu:
+        model.load_state_dict(torch.load(data.load_model_dir))
+    else:
+        model.load_state_dict(torch.load(data.load_model_dir, map_location=torch.device('cpu')))
+    
     print("Decode %s data, nbest: %s ..."%(name, data.nbest))
     start_time = time.time()
     speed, acc, p, r, f, pred_results, pred_scores = evaluate(data, model, name, data.nbest)
@@ -563,6 +566,7 @@ if __name__ == '__main__':
         print("MODEL: decode")
         data.load(data.dset_dir)
         data.read_config(args.config)
+        data.HP_gpu = torch.cuda.is_available()
         print(data.raw_dir)
         # exit(0)
         data.show_data_summary()
