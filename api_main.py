@@ -161,7 +161,6 @@ def temporary_filename(suffix='tmp', dir=None, text=False, remove_on_exit=True):
 
     def remove_file(path):
         os.remove(path)
-        logging.debug('temporaryFilename: rm -f %s' % path)
 
     if remove_on_exit:
         atexit.register(remove_file, path)
