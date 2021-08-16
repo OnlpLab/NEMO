@@ -186,7 +186,7 @@ for model in ModelName:
 #query objects for FastAPI documentation
 sent_query = Query( None,
                     description="Hebrew sentences seprated by '\\n'",
-                    example="עשרות אנשים מגיעים מתאילנד לישראל.\nתופעה זו התבררה אתמול בוועדת העבודה והרווחה של הכנסת",
+                    example="עשרות אנשים מגיעים מתאילנד לישראל.\nתופעה זו התבררה אתמול בוועדת העבודה והרווחה של הכנסת.",
                   )
 
                   
@@ -194,10 +194,35 @@ tokenized_query = Query( False,
                     description="Are sentences pre-tokenized? If so, we split each sentence by space char. Else, we use a built in tokenizer."
                   )
 
-app = FastAPI()
+
+description = """
+NEMO API helps you do awesome stuff with Hebrew named entities and morphology 🐠
+
+All endpoints get Hebrew sentences split by a linebreak char, and return different combinations of neural NER and morpho-syntactic parsing.\\
+API schema served at [openapi.json](openapi.json)
+
+Have fun and use responsibly 😊
+"""
+
+app = FastAPI(
+    title="NEMO",
+    description=description,
+    version="0.1.0",
+    terms_of_service="https://github.com/OnlpLab/NEMO",
+    contact={
+        "name": "Dan Bareket",
+        "email": "dbareket@gmail.com",
+    },
+    license_info={
+        "name": "Apache 2.0",
+        "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
+    },
+)
+
 
 available_commands = ['run_ner_model', 'multi_align_hybrid', 'multi_to_single',
                       'morph_yap', 'morph_hybrid', 'morph_hybrid_align_tokens']
+
 
 @app.get("/")
 def list_commands():
