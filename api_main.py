@@ -167,20 +167,6 @@ def temporary_filename(suffix='tmp', dir=None, text=False, remove_on_exit=True):
         atexit.register(remove_file, path)
 
     return path
-
-
-# load all models
-class ModelName(str, Enum):
-    token_single = 'token-single'
-    token_multi = "token-multi"
-    morph = "morph"
-
-loaded_models = {}
-for model in ModelName:
-    m = {}
-    m['data'] = get_ncrf_data_object(model)
-    m['model'] = load_ncrf_model(m['data'])
-    loaded_models[model] = m
     
 
 #query objects for FastAPI documentation
@@ -228,6 +214,24 @@ available_commands = ['run_ner_model', 'multi_align_hybrid', 'multi_to_single',
 def list_commands():
     return {"message": "Please specify command in URL path.",
             "available_commands": available_commands}
+
+
+class ModelName(str, Enum):
+    token_single = 'token-single'
+    token_multi = "token-multi"
+    morph = "morph"
+
+
+# load all models on app startup
+@app.on_event("startup")
+def load_all_models():
+    global loaded_models
+    loaded_models = {}
+    for model in ModelName:
+        m = {}
+        m['data'] = get_ncrf_data_object(model)
+        m['model'] = load_ncrf_model(m['data'])
+        loaded_models[model] = m
 
 
 @app.get("/run_ner_model/")
