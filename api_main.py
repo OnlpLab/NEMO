@@ -11,6 +11,7 @@ import json
 import networkx as nx
 import bclm
 from ne_evaluate_mentions import fix_multi_biose
+from enum import Enum
 
 os.environ['CUDA_VISIBLE_DEVICES'] = ''
 
@@ -169,9 +170,13 @@ def temporary_filename(suffix='tmp', dir=None, text=False, remove_on_exit=True):
 
 
 # load all models
-available_models = ['token-single', 'token-multi', 'morph']
+class ModelName(str, Enum):
+    token_single = 'token-single'
+    token_multi = "token-multi"
+    morph = "morph"
+
 loaded_models = {}
-for model in available_models:
+for model in ModelName:
     m = {}
     m['data'] = get_ncrf_data_object(model)
     m['model'] = load_ncrf_model(m['data'])
@@ -187,7 +192,7 @@ def home():
 
 
 @app.get("/run_ner_model/")
-def run_ner_model(sentences: str, model_name: str, tokenized: Optional[bool] = False):
+def run_ner_model(sentences: str, model_name: ModelName, tokenized: Optional[bool] = False):
     if model_name in available_models:
         model = loaded_models[model_name]
         temp_input = temporary_filename()
@@ -202,7 +207,7 @@ def run_ner_model(sentences: str, model_name: str, tokenized: Optional[bool] = F
 
 
 @app.get("/multi_align_hybrid/")
-def multi_align_hybrid(sentences: str, model_name: Optional[str] = 'token-multi', tokenized: Optional[bool] = False):
+def multi_align_hybrid(sentences: str, model_name: Optional[ModelName] = 'token-multi', tokenized: Optional[bool] = False):
     if not 'multi' in model_name:
         return {'error': 'model must be "*multi*" for "multi_align_hybrid"'}
     model_out = run_ner_model(sentences, model_name, tokenized)
@@ -224,7 +229,7 @@ def multi_align_hybrid(sentences: str, model_name: Optional[str] = 'token-multi'
     
     
 @app.get("/multi_to_single/")
-def multi_to_single(sentences: str, model_name: Optional[str] = 'token-multi', tokenized: Optional[bool] = False):
+def multi_to_single(sentences: str, model_name: Optional[ModelName] = 'token-multi', tokenized: Optional[bool] = False):
     if not 'multi' in model_name:
         return {'error': 'model must be "*multi*" for "multi_to_single"'}
     model_out = run_ner_model(sentences, model_name, tokenized)
@@ -238,7 +243,7 @@ def multi_to_single(sentences: str, model_name: Optional[str] = 'token-multi', t
 
 
 @app.get("/morph_yap/")
-def morph_yap(sentences: str, model_name: Optional[str] = 'morph', tokenized: Optional[bool] = False):
+def morph_yap(sentences: str, model_name: Optional[ModelName] = 'morph', tokenized: Optional[bool] = False):
     if not 'morph' in model_name:
         return {'error': 'model must be "*morph*" for "morph_yap"'}
     tok_sents = get_sents(sentences, tokenized)
@@ -260,7 +265,7 @@ def morph_yap(sentences: str, model_name: Optional[str] = 'morph', tokenized: Op
 flatten = lambda l: [item for sublist in l for item in sublist]
 
 @app.get("/morph_hybrid/")
-def morph_hybrid(sentences: str, multi_model_name: Optional[str] = 'token-multi', morph_model_name: Optional[str] = 'morph', tokenized: Optional[bool] = False,
+def morph_hybrid(sentences: str, multi_model_name: Optional[ModelName] = 'token-multi', morph_model_name: Optional[ModelName] = 'morph', tokenized: Optional[bool] = False,
                 align_tokens: Optional[bool] = False):
     if not 'multi' in multi_model_name:
         return {'error': 'multi model must be "*multi*" for "morph_hybrid"'}
@@ -301,7 +306,7 @@ def morph_hybrid(sentences: str, multi_model_name: Optional[str] = 'token-multi'
     
 
 @app.get("/morph_hybrid_align_tokens/")
-def morph_hybrid_align_tokens(sentences: str, multi_model_name: Optional[str] = 'token-multi', morph_model_name: Optional[str] = 'morph', tokenized: Optional[bool] = False):
+def morph_hybrid_align_tokens(sentences: str, multi_model_name: Optional[ModelName] = 'token-multi', morph_model_name: Optional[ModelName] = 'morph', tokenized: Optional[bool] = False):
     return morph_hybrid(sentences, multi_model_name, morph_model_name, tokenized, align_tokens=True)
 
 
