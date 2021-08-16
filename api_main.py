@@ -90,8 +90,14 @@ def run_yap_joint(tokenized_sentences):
     data = json.dumps({"text": f"{text}  "})
     resp = yap_request('/yap/heb/joint', data)
     return resp
-    
-    
+
+
+def run_yap_dep(md_lattice):
+    data = json.dumps({'disamblattice': md_lattice})
+    resp = yap_request('/yap/heb/dep', data)
+    return resp['dep_tree']
+
+
 def get_biose_count(ner_multi_preds):
     bc = []
     for i, sent in enumerate(ner_multi_preds):
@@ -350,7 +356,7 @@ def morph_yap(sentences: str=sent_query, model_name: Optional[ModelName] = 'morp
 
 flatten = lambda l: [item for sublist in l for item in sublist]
 
-@app.get("/morph_hybrid/", response_model=List[MorphHybridDoc], response_model_exclude=["dep_tree"])
+@app.get("/morph_hybrid/", response_model=List[MorphHybridDoc])
 def morph_hybrid(sentences: str=sent_query, multi_model_name: Optional[ModelName] = 'token-multi', morph_model_name: Optional[ModelName] = 'morph', tokenized: Optional[bool] = tokenized_query,
                 align_tokens: Optional[bool] = False):
     if not 'multi' in multi_model_name:
@@ -363,6 +369,7 @@ def morph_hybrid(sentences: str=sent_query, multi_model_name: Optional[ModelName
     ma_lattice = run_yap_hebma(tok_sents)
     pruned_lattice = prune_lattice(ma_lattice, ner_multi_preds)
     md_lattice = run_yap_md(pruned_lattice) #TODO: this should be joint, but there is currently no joint on MA in yap api
+    dep_tree = run_yap_dep(md_lattice) # instead, we run yap as pipeline md->dep
     morph_aligned_preds = align_multi_md(ner_multi_preds, md_lattice)
     md_sents = (bclm.get_sentences_list(nemo.read_lattices(md_lattice), ['form']).apply(lambda x: [t[0] for t in x] )).to_list()
     model = loaded_models[morph_model_name]
@@ -376,6 +383,7 @@ def morph_hybrid(sentences: str=sent_query, multi_model_name: Optional[ModelName
             'ma': ma_lattice,
             'pr': pruned_lattice,
             'md': md_lattice,
+            'dep': dep_tree,
             'mf': md_sents,
             'al': morph_aligned_preds,
             'mor': morph_preds,
@@ -392,8 +400,8 @@ def morph_hybrid(sentences: str=sent_query, multi_model_name: Optional[ModelName
     else: r['moral'] = [None, ]*len(r['t'])
     
     response = []
-    for t, nm, ns, ma, pr, md, mf, al, mor, moral in zip(r['t'], r['nm'], r['ns'],
-                                             r['ma'].split('\n\n'), r['pr'].split('\n\n'), r['md'].split('\n\n'),
+    for t, nm, ns, ma, pr, md, dep, mf, al, mor, moral in zip(r['t'], r['nm'], r['ns'],
+                                             r['ma'].split('\n\n'), r['pr'].split('\n\n'), r['md'].split('\n\n'), r['dep'].split('\n\n'),
                                              r['mf'], r['al'], r['mor'], r['moral']):
         response.append( MorphHybridDoc( tokenized_text=t,
                                     multi_ncrf_preds=nm,
@@ -401,6 +409,7 @@ def morph_hybrid(sentences: str=sent_query, multi_model_name: Optional[ModelName
                                     ma_lattice=ma,
                                     pruned_lattice=pr,
                                     md_lattice=md,
+                                    dep_tree=dep,
                                     morph_forms=mf,
                                     multi_ncrf_preds_align_morph=al,
                                     morph_ncrf_preds=mor,
@@ -409,7 +418,7 @@ def morph_hybrid(sentences: str=sent_query, multi_model_name: Optional[ModelName
     return response
 
 
-@app.get("/morph_hybrid_align_tokens/", response_model=List[MorphHybridDoc], response_model_exclude=["dep_tree"])
+@app.get("/morph_hybrid_align_tokens/", response_model=List[MorphHybridDoc])
 def morph_hybrid_align_tokens(sentences: str=sent_query, multi_model_name: Optional[ModelName] = 'token-multi', morph_model_name: Optional[ModelName] = 'morph', tokenized: Optional[bool] = tokenized_query):
     return morph_hybrid(sentences, multi_model_name, morph_model_name, tokenized, align_tokens=True)
 
