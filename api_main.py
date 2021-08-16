@@ -350,7 +350,7 @@ def morph_yap(sentences: str=sent_query, model_name: Optional[ModelName] = 'morp
 
 flatten = lambda l: [item for sublist in l for item in sublist]
 
-@app.get("/morph_hybrid/", response_model=List[MorphHybridDoc])
+@app.get("/morph_hybrid/", response_model=List[MorphHybridDoc], response_model_exclude=["dep_tree"])
 def morph_hybrid(sentences: str=sent_query, multi_model_name: Optional[ModelName] = 'token-multi', morph_model_name: Optional[ModelName] = 'morph', tokenized: Optional[bool] = tokenized_query,
                 align_tokens: Optional[bool] = False):
     if not 'multi' in multi_model_name:
@@ -409,7 +409,7 @@ def morph_hybrid(sentences: str=sent_query, multi_model_name: Optional[ModelName
     return response
 
 
-@app.get("/morph_hybrid_align_tokens/", response_model=List[MorphHybridDoc])
+@app.get("/morph_hybrid_align_tokens/", response_model=List[MorphHybridDoc], response_model_exclude=["dep_tree"])
 def morph_hybrid_align_tokens(sentences: str=sent_query, multi_model_name: Optional[ModelName] = 'token-multi', morph_model_name: Optional[ModelName] = 'morph', tokenized: Optional[bool] = tokenized_query):
     return morph_hybrid(sentences, multi_model_name, morph_model_name, tokenized, align_tokens=True)
 
