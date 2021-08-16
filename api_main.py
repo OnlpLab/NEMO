@@ -156,8 +156,8 @@ def temporary_filename(suffix='tmp', dir=None, text=False, remove_on_exit=True):
     something like this, right?  Nope.)"""
     
     
-    (fileHandle, path) = mkstemp(suffix=suffix, dir=dir, text=text)
-    os.close(fileHandle)
+    (file_handle, path) = mkstemp(suffix=suffix, dir=dir, text=text)
+    os.close(file_handle)
 
     def remove_file(path):
         os.remove(path)
