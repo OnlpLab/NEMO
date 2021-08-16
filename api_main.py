@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 import pandas as pd
 from typing import Optional
 from tempfile import mkstemp
@@ -183,6 +183,17 @@ for model in ModelName:
     loaded_models[model] = m
     
 
+#query objects for FastAPI documentation
+sent_query = Query( None,
+                    description="Hebrew sentences seprated by '\\n'",
+                    example="עשרות אנשים מגיעים מתאילנד לישראל.\nתופעה זו התבררה אתמול בוועדת העבודה והרווחה של הכנסת",
+                  )
+
+                  
+tokenized_query = Query( False,
+                    description="Are sentences pre-tokenized? If so, we split each sentence by space char. Else, we use a built in tokenizer."
+                  )
+
 app = FastAPI()
 
 
@@ -192,22 +203,19 @@ def home():
 
 
 @app.get("/run_ner_model/")
-def run_ner_model(sentences: str, model_name: ModelName, tokenized: Optional[bool] = False):
-    if model_name in available_models:
-        model = loaded_models[model_name]
-        temp_input = temporary_filename()
-        tok_sents = create_input_file(sentences, temp_input, tokenized)
-        preds = ncrf_decode(model['model'], model['data'], temp_input)
-        return { 
-            'tokenized_text': tok_sents,
-            'nemo_predictions': preds 
-        }
-    else:
-        return {'error': f'model name "{model_name}" unavailable'}
+def run_ner_model(sentences: str=sent_query, model_name: ModelName = 'token-single', tokenized: Optional[bool] = tokenized_query):
+    model = loaded_models[model_name]
+    temp_input = temporary_filename()
+    tok_sents = create_input_file(sentences, temp_input, tokenized)
+    preds = ncrf_decode(model['model'], model['data'], temp_input)
+    return { 
+        'tokenized_text': tok_sents,
+        'nemo_predictions': preds,
+    }
 
 
 @app.get("/multi_align_hybrid/")
-def multi_align_hybrid(sentences: str, model_name: Optional[ModelName] = 'token-multi', tokenized: Optional[bool] = False):
+def multi_align_hybrid(sentences: str=sent_query, model_name: Optional[ModelName] = 'token-multi', tokenized: Optional[bool] = tokenized_query):
     if not 'multi' in model_name:
         return {'error': 'model must be "*multi*" for "multi_align_hybrid"'}
     model_out = run_ner_model(sentences, model_name, tokenized)
@@ -229,7 +237,7 @@ def multi_align_hybrid(sentences: str, model_name: Optional[ModelName] = 'token-
     
     
 @app.get("/multi_to_single/")
-def multi_to_single(sentences: str, model_name: Optional[ModelName] = 'token-multi', tokenized: Optional[bool] = False):
+def multi_to_single(sentences: str=sent_query, model_name: Optional[ModelName] = 'token-multi', tokenized: Optional[bool] = tokenized_query):
     if not 'multi' in model_name:
         return {'error': 'model must be "*multi*" for "multi_to_single"'}
     model_out = run_ner_model(sentences, model_name, tokenized)
@@ -243,7 +251,7 @@ def multi_to_single(sentences: str, model_name: Optional[ModelName] = 'token-mul
 
 
 @app.get("/morph_yap/")
-def morph_yap(sentences: str, model_name: Optional[ModelName] = 'morph', tokenized: Optional[bool] = False):
+def morph_yap(sentences: str=sent_query, model_name: Optional[ModelName] = 'morph', tokenized: Optional[bool] = tokenized_query):
     if not 'morph' in model_name:
         return {'error': 'model must be "*morph*" for "morph_yap"'}
     tok_sents = get_sents(sentences, tokenized)
@@ -265,7 +273,7 @@ def morph_yap(sentences: str, model_name: Optional[ModelName] = 'morph', tokeniz
 flatten = lambda l: [item for sublist in l for item in sublist]
 
 @app.get("/morph_hybrid/")
-def morph_hybrid(sentences: str, multi_model_name: Optional[ModelName] = 'token-multi', morph_model_name: Optional[ModelName] = 'morph', tokenized: Optional[bool] = False,
+def morph_hybrid(sentences: str=sent_query, multi_model_name: Optional[ModelName] = 'token-multi', morph_model_name: Optional[ModelName] = 'morph', tokenized: Optional[bool] = tokenized_query,
                 align_tokens: Optional[bool] = False):
     if not 'multi' in multi_model_name:
         return {'error': 'multi model must be "*multi*" for "morph_hybrid"'}
@@ -306,7 +314,7 @@ def morph_hybrid(sentences: str, multi_model_name: Optional[ModelName] = 'token-
     
 
 @app.get("/morph_hybrid_align_tokens/")
-def morph_hybrid_align_tokens(sentences: str, multi_model_name: Optional[ModelName] = 'token-multi', morph_model_name: Optional[ModelName] = 'morph', tokenized: Optional[bool] = False):
+def morph_hybrid_align_tokens(sentences: str=sent_query, multi_model_name: Optional[ModelName] = 'token-multi', morph_model_name: Optional[ModelName] = 'morph', tokenized: Optional[bool] = tokenized_query):
     return morph_hybrid(sentences, multi_model_name, morph_model_name, tokenized, align_tokens=True)
 
 
