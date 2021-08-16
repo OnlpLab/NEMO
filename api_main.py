@@ -196,10 +196,13 @@ tokenized_query = Query( False,
 
 app = FastAPI()
 
+available_commands = ['run_ner_model', 'multi_align_hybrid', 'multi_to_single',
+                      'morph_yap', 'morph_hybrid', 'morph_hybrid_align_tokens']
 
 @app.get("/")
-def home():
-    return {"error": "Please specify command"}
+def list_commands():
+    return {"message": "Please specify command in URL path.",
+            "available_commands": available_commands}
 
 
 @app.get("/run_ner_model/")
@@ -318,7 +321,6 @@ def morph_hybrid_align_tokens(sentences: str=sent_query, multi_model_name: Optio
     return morph_hybrid(sentences, multi_model_name, morph_model_name, tokenized, align_tokens=True)
 
 
-# available_commands = ['run_ner_model', 'multi_align_hybrid']
 #
 # @app.get("/run_separate_nemo/")
 # def run_separate_nemo(command: str, model_name: str, sentence: str):
