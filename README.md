@@ -43,11 +43,10 @@ Code and models for neural modeling of Hebrew NER. Described in the TACL paper [
 ### To run API server:
 1. In YAP folder, run YAP API server `./yap api` (if you specify a port, change it in `config.py`)
 1. In NEMO folder, run NEMO API server `uvicorn api_main:app --reload --port 8090`
-1. You can find the available API endpoints with usage examples in [api_usage.ipynb](./api/api_usage.ipynb).
-1. Once the API server is up, you can also check out the API documentation by opening (http://localhost:8090/docs) in your browser.
 
 
 ## Basic Usage
+### File Input Usage (CLI)
 1. All you need to do is run `nemo.py` with a specific command (scenario), on a text file of Hebrew sentences separated by a line-break.
 1. You can run a neural NER model directly, or choose a full end-to-end scenario that includes morphological segmentation and alignments (described fully in the [next section](#models-and-scenarios)). e.g.:
     * the `run_ner_model` command with the `token-single` model will tokenize sentences and run the `token-single` model: 
@@ -57,6 +56,10 @@ Code and models for neural modeling of Hebrew NER. Described in the TACL paper [
 1. You can find outputs of different commands on [example.txt](./example.txt) in: [example_output_MORPH_HYBRID_ALIGN_TOKENS.txt](./example_output_MORPH_HYBRID_ALIGN_TOKENS.txt), [example_output_MORPH_HYBRID.txt](./example_output_MORPH_HYBRID.txt), [example_output_MORPH_YAP.txt](./example_output_MORPH_YAP.txt), [example_output_MULTI_ALIGN.txt](./example_output_MULTI_ALIGN.txt), [example_output_SINGLE.txt](./example_output_SINGLE.txt)
 1. For a full list of the available commands please consult the [next section](#models-and-scenarios) and the inline documentation at the end of `nemo.py`. 
 1. Please use only the regular and not the `*_oov` models (which contain embeddings only for words that appear in the NEMO corpus). In other words, unless you use the model to replicate our results on the Hebrew treebank, always use e.g. `token-multi` and not `token-multi_oov`. 
+
+### API Usage
+1. Once the API server is up,  check out the API documentation by opening (http://localhost:8090/docs) in your browser.
+1. You can find the available API endpoints and more usage examples in [api_usage.ipynb](./api/api_usage.ipynb).
 
 
 ## Models and Scenarios
@@ -103,7 +106,6 @@ Finally, to get our desired output (tokens/morphemes), we can choose between dif
 ## Important Notes
 1. NCRFpp was great for our experiments on the NEMO corpus (which is given, constant, data), but it holds some caveats for real life scenarios of arbitrary text:
     * fastText is not used on the fly to obtain vectors for OOV words (i.e. those that were not seen in our Wikipedia corpus). Instead, it is used as a regular embedding matrix. Hence the full generalization capacities of fastText, as shown in our experiments, are not available in the currently provided models, which will perform slightly worse than they could on arbitrary text. In our experiments we created such a matrix in advance with all the words in the NEMO corpus and used it during training. Information regarding training your own model with your own vocabulary in the [next section](#training-your-own-model).
-    * We currently do not provide an API, only file input/outputs. The pipeline works in the background through temp files, you can choose to delete these by default using the `DELETE_TEMP_FILES` config parameter.  
 1. In the near future we plan to publish a cleaner end-to-end implementation, including use of our new [AlephBERT](https://github.com/OnlpLab/AlephBERT) pre-trained Transformer models. 
 1. For archiving and reproducibility purposes, our original code used for experiments and analysis can be found in the following repos: https://github.com/cjer/NCRFpp, https://github.com/cjer/NER (beware - 2 years of Jupyter notebooks).
 

@@ -246,7 +246,9 @@ class MorphHybridDoc(HybridDoc, MorphNERDoc):
     pass
 
 
-@app.get("/")
+@app.get("/",
+         summary="Get list of available command endpoints"   
+        )
 def list_commands():
     return {"message": "Please specify command in URL path.",
             "available_commands": available_commands}
@@ -270,7 +272,10 @@ def load_all_models():
         loaded_models[model] = m
 
 
-@app.get("/run_ner_model/", response_model=List[NCRFPreds])
+@app.get("/run_ner_model/",
+         response_model=List[NCRFPreds],
+         summary="Get NER sequence label predictions, no morphological segmentation"
+        )
 def run_ner_model(sentences: str=sent_query, model_name: ModelName = 'token-single', tokenized: Optional[bool] = tokenized_query):
     model = loaded_models[model_name]
     temp_input = temporary_filename()
@@ -283,7 +288,10 @@ def run_ner_model(sentences: str=sent_query, model_name: ModelName = 'token-sing
     return response
 
 
-@app.get("/multi_align_hybrid/", response_model=List[HybridDoc])
+@app.get("/multi_align_hybrid/",
+         response_model=List[HybridDoc],
+         summary="Use token-multi model for MD and NER labels"
+        )
 def multi_align_hybrid(sentences: str=sent_query, model_name: Optional[ModelName] = 'token-multi', tokenized: Optional[bool] = tokenized_query):
     if not 'multi' in model_name:
         return {'error': 'model must be "*multi*" for "multi_align_hybrid"'}
@@ -312,7 +320,9 @@ def multi_align_hybrid(sentences: str=sent_query, model_name: Optional[ModelName
     return response
 
 
-@app.get("/multi_to_single/", response_model=List[TokenMultiDoc])
+@app.get("/multi_to_single/", response_model=List[TokenMultiDoc],
+         summary="Use token-multi model to get token-level NER labels. No morphological segmentation."
+        )
 def multi_to_single(sentences: str=sent_query, model_name: Optional[ModelName] = 'token-multi', tokenized: Optional[bool] = tokenized_query):
     if not 'multi' in model_name:
         return {'error': 'model must be "*multi*" for "multi_to_single"'}
@@ -328,7 +338,10 @@ def multi_to_single(sentences: str=sent_query, model_name: Optional[ModelName] =
                                     ))
     return response
 
-@app.get("/morph_yap/", response_model=List[MorphNERDoc])
+@app.get("/morph_yap/",
+         response_model=List[MorphNERDoc],
+         summary="Standard pipeline - use yap for morpho-syntax, then use NER morph model for NER labels"
+        )
 def morph_yap(sentences: str=sent_query, model_name: Optional[ModelName] = 'morph', tokenized: Optional[bool] = tokenized_query):
     if not 'morph' in model_name:
         return {'error': 'model must be "*morph*" for "morph_yap"'}
@@ -356,7 +369,9 @@ def morph_yap(sentences: str=sent_query, model_name: Optional[ModelName] = 'morp
 
 flatten = lambda l: [item for sublist in l for item in sublist]
 
-@app.get("/morph_hybrid/", response_model=List[MorphHybridDoc])
+@app.get("/morph_hybrid/",
+         response_model=List[MorphHybridDoc] ,
+         summary="Segment using hybrid method (w/ token-multi). Then get NER labels with morph model.")
 def morph_hybrid(sentences: str=sent_query, multi_model_name: Optional[ModelName] = 'token-multi', morph_model_name: Optional[ModelName] = 'morph', tokenized: Optional[bool] = tokenized_query,
                 align_tokens: Optional[bool] = False):
     if not 'multi' in multi_model_name:
@@ -418,7 +433,9 @@ def morph_hybrid(sentences: str=sent_query, multi_model_name: Optional[ModelName
     return response
 
 
-@app.get("/morph_hybrid_align_tokens/", response_model=List[MorphHybridDoc])
+@app.get("/morph_hybrid_align_tokens/", 
+         response_model=List[MorphHybridDoc] ,
+         summary="Segment using hybrid method (w/ token-multi). Then get NER labels with morph model + align with tokens to get token-level NER.")
 def morph_hybrid_align_tokens(sentences: str=sent_query, multi_model_name: Optional[ModelName] = 'token-multi', morph_model_name: Optional[ModelName] = 'morph', tokenized: Optional[bool] = tokenized_query):
     return morph_hybrid(sentences, multi_model_name, morph_model_name, tokenized, align_tokens=True)
 
