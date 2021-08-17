@@ -105,7 +105,7 @@ Finally, to get our desired output (tokens/morphemes), we can choose between dif
 ## Important Notes
 1. NCRFpp was great for our experiments on the NEMO corpus (which is given, constant, data), but it holds some caveats for real life scenarios of arbitrary text:
     * fastText is not used on the fly to obtain vectors for OOV words (i.e. those that were not seen in our Wikipedia corpus). Instead, it is used as a regular embedding matrix. Hence the full generalization capacities of fastText, as shown in our experiments, are not available in the currently provided models, which will perform slightly worse than they could on arbitrary text. In our experiments we created such a matrix in advance with all the words in the NEMO corpus and used it during training. Information regarding training your own model with your own vocabulary in the [next section](#training-your-own-model).
-    * 1. If you wish to replicate these results on the Hebrew treebank, download the `*oov*` models from [here](https://nlp.biu.ac.il/~danb/nemo_models/) and extract to the `data/` folder (they already appear in `config.py`). 
+    * If you do wish to replicate our reported results on the Hebrew treebank, download the `*oov*` models from [here](https://nlp.biu.ac.il/~danb/nemo_models/) and extract to the `data/` folder (they already appear in `config.py`). 
 1. In the near future we plan to publish a cleaner end-to-end implementation, including use of our new [AlephBERT](https://github.com/OnlpLab/AlephBERT) pre-trained Transformer models. 
 1. For archiving and reproducibility purposes, our original code used for experiments and analysis can be found in the following repos: https://github.com/cjer/NCRFpp, https://github.com/cjer/NER (beware - 2 years of Jupyter notebooks).
 
