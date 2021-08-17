@@ -30,12 +30,11 @@ Code and models for neural modeling of Hebrew NER. Described in the TACL paper [
 ## Setup
 ### Pre-requisites:
 
-1. Preferably in a virtual env: `pip install -r requirements.txt`
-   1. Install `bclm>=1.0.0`: http://github.com/OnlpLab/bclm (this step will be spared soon when bclm is added to pip)
-1. Install `yap`: https://github.com/OnlpLab/yap
 1. Clone this NEMO repo: `git clone https://github.com/OnlpLab/NEMO.git`
 1. Enter the repo directory: `cd NEMO`
+1. Preferably in a virtual env: `pip install -r requirements.txt`
 1. Unpack model files: `gunzip data/*.gz`
+1. Install `yap`: https://github.com/OnlpLab/yap
 
 ### To run on file input (CLI): `nemo.py`
 1. Change `YAP_PATH` in `config.py` to the path of your local `yap` executable.
