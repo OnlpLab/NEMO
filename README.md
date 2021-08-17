@@ -36,15 +36,20 @@ Code and models for neural modeling of Hebrew NER. Described in the TACL paper [
 1. Unpack model files: `gunzip data/*.gz`
 1. Install `yap`: https://github.com/OnlpLab/yap
 
-### To run on file input (CLI): `nemo.py`
-1. Change `YAP_PATH` in `config.py` to the path of your local `yap` executable.
-
-### To run API server:
+### To run API server
 1. In YAP folder, run YAP API server `./yap api` (if you specify a port, change it in `config.py`)
 1. In NEMO folder, run NEMO API server `uvicorn api_main:app --reload --port 8090`
 
+### To run on file input (CLI): `nemo.py`
+1. Change `YAP_PATH` in `config.py` to the path of your local `yap` executable.
+
 
 ## Basic Usage
+
+### API Usage
+1. Once the API server is up,  check out the API documentation by opening (http://localhost:8090/docs) in your browser.
+1. You can find the available API endpoints and more usage examples in [api_usage.ipynb](./api/api_usage.ipynb).
+
 ### File Input Usage (CLI)
 1. All you need to do is run `nemo.py` with a specific command (scenario), on a text file of Hebrew sentences separated by a line-break.
 1. You can run a neural NER model directly, or choose a full end-to-end scenario that includes morphological segmentation and alignments (described fully in the [next section](#models-and-scenarios)). e.g.:
@@ -52,13 +57,9 @@ Code and models for neural modeling of Hebrew NER. Described in the TACL paper [
         - ```python nemo.py run_ner_model token-single example.txt example_output.txt```
     * the `morph_hybrid` command runs the end-to-end segmentation and NER pipeline which provided our best performing morpheme-level NER boundaries:  
         - ```python nemo.py morph_yap morph example.txt example_output_MORPH.txt```
-1. You can find outputs of different commands on [example.txt](./example.txt) in: [example_output_MORPH_HYBRID_ALIGN_TOKENS.txt](./example_output_MORPH_HYBRID_ALIGN_TOKENS.txt), [example_output_MORPH_HYBRID.txt](./example_output_MORPH_HYBRID.txt), [example_output_MORPH_YAP.txt](./example_output_MORPH_YAP.txt), [example_output_MULTI_ALIGN.txt](./example_output_MULTI_ALIGN.txt), [example_output_SINGLE.txt](./example_output_SINGLE.txt)
+1. You can find outputs of different commands on the input in [example.txt](./example.txt) in: [morph_hybrid_align_tokens](./example_output_MORPH_HYBRID_ALIGN_TOKENS.txt), [morph_hybrid](./example_output_MORPH_HYBRID.txt), [morph_yap](./example_output_MORPH_YAP.txt), [multi_align_hybrid](./example_output_MULTI_ALIGN.txt), [single](./example_output_SINGLE.txt)
 1. For a full list of the available commands please consult the [next section](#models-and-scenarios) and the inline documentation at the end of `nemo.py`. 
 1. Please use only the regular and not the `*_oov` models (which contain embeddings only for words that appear in the NEMO corpus). In other words, unless you use the model to replicate our results on the Hebrew treebank, always use e.g. `token-multi` and not `token-multi_oov`. 
-
-### API Usage
-1. Once the API server is up,  check out the API documentation by opening (http://localhost:8090/docs) in your browser.
-1. You can find the available API endpoints and more usage examples in [api_usage.ipynb](./api/api_usage.ipynb).
 
 
 ## Models and Scenarios
