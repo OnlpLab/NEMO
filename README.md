@@ -1,4 +1,4 @@
-# 🐠<sup>🐠</sup> NEMO<sup>2</sup> - Hebrew NER Neural Modeling for Named Entity (recognition) and Morphology
+# 🐠<sup>🐠</sup> NEMO<sup>2</sup> - Neural Modeling for Named Entities and Morphology - Hebrew NER
 
 
 Table of Contents
