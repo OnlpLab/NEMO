@@ -20,6 +20,10 @@ MULTI_MODEL_FOR_HYBRID = 'token-multi'
 
 YAP_PATH = '../yapproj/src/yap/yap'
 
-YAP_API_URL = 'http://localhost:8000'
+YAP_API_HOST = 'localhost'
+
+YAP_API_PORT = '8000'
+
+YAP_API_URL_TEMPLATE = 'http://{host}:{port}'
 
 YAP_API_HEADERS = {'content-type': 'application/json'}

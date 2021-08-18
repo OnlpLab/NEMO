@@ -22,6 +22,10 @@ import torch
 from model.seqlabel import SeqLabel
 from ncrf_main import evaluate
 
+if 'YAP_API_HOST' in os.environ and os.environ['YAP_API_HOST']:
+    YAP_API_HOST = os.environ['YAP_API_HOST']
+if 'YAP_API_PORT' in os.environ and os.environ['YAP_API_PORT']:
+    YAP_API_PORT = os.environ['YAP_API_PORT']
 
 def get_ncrf_data_object(model_name): #, input_path, output_path):
     data = Data()
@@ -68,8 +72,10 @@ def create_input_file(text, path, tokenized):
 
 
 ## YAP stuff
-def yap_request(route, data, yap_url=YAP_API_URL, headers=YAP_API_HEADERS):
-    return requests.get(yap_url+route, data=data, headers=headers).json()
+def yap_request(route, data, host=YAP_API_HOST,
+                port=YAP_API_PORT, headers=YAP_API_HEADERS):
+    url = YAP_API_URL_TEMPLATE.format(host=host, port=port)
+    return requests.get(url+route, data=data, headers=headers).json()
 
 
 def run_yap_hebma(tokenized_sentences):
