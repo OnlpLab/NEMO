@@ -344,6 +344,7 @@ def multi_align_hybrid(sentences: str=sent_query,
     ma_lattice = run_yap_hebma(tok_sents)
     pruned_lattice = prune_lattice(ma_lattice, ner_multi_preds)
     md_lattice = run_yap_md(pruned_lattice) #TODO: this should be joint, but there is currently no joint on MA in yap api
+    dep_tree = run_yap_dep(md_lattice) # instead, we run yap as pipeline md->dep
     md_sents = (bclm.get_sentences_list(nemo.read_lattices(md_lattice), ['form']).apply(lambda x: [t[0] for t in x] )).to_list()
     morph_aligned_preds = align_multi_md(ner_multi_preds, md_lattice)
     
@@ -357,6 +358,7 @@ def multi_align_hybrid(sentences: str=sent_query,
                                     ma_lattice=ma,
                                     pruned_lattice=pr,
                                     md_lattice=md,
+                                    dep_tree=dep_tree,
                                     morph_forms=mf,
                                     multi_ncrf_preds_align_morph=al,
                                     ))
