@@ -247,7 +247,7 @@ morph_model_query = Query(MorphModelName.morph,
 class NEMOQuery(BaseModel):
     sentences: str
     tokenized: Optional[bool]= False
-    
+
     class Config:
         schema_extra = {
             "example": {
@@ -255,6 +255,8 @@ class NEMOQuery(BaseModel):
                 "tokenized": False,
             }
         }
+
+
 #response models
 class NEMODoc(BaseModel):
     tokenized_text: List[str]
@@ -304,7 +306,7 @@ def load_all_models():
         loaded_models[model] = m
 
 
-@app.post("/run_ner_model/",
+@app.post("/run_ner_model",
          response_model=List[NCRFPreds],
          summary="Get NER sequence label predictions, no morphological segmentation"
         )
@@ -322,7 +324,7 @@ def run_ner_model(q: NEMOQuery,
     return response
 
 
-@app.post("/multi_to_single/", response_model=List[TokenMultiDoc],
+@app.post("/multi_to_single", response_model=List[TokenMultiDoc],
          summary="Use token-multi model to get token-level NER labels. No morphological segmentation."
         )
 def multi_to_single(q: NEMOQuery,
@@ -341,7 +343,7 @@ def multi_to_single(q: NEMOQuery,
     return response
 
 
-@app.post("/multi_align_hybrid/",
+@app.post("/multi_align_hybrid",
          response_model=List[HybridDoc],
          summary="Use token-multi model for MD and NER labels"
         )
@@ -375,7 +377,7 @@ def multi_align_hybrid(q: NEMOQuery,
     return response
 
 
-@app.post("/morph_yap/",
+@app.post("/morph_yap",
          response_model=List[MorphNERDoc],
          summary="Standard pipeline - use yap for morpho-syntax, then use NER morph model for NER labels"
         )
@@ -407,7 +409,7 @@ def morph_yap(q: NEMOQuery,
 flatten = lambda l: [item for sublist in l for item in sublist]
 
 
-@app.post("/morph_hybrid/",
+@app.post("/morph_hybrid",
          response_model=List[MorphHybridDoc] ,
          summary="Segment using hybrid method (w/ token-multi). Then get NER labels with morph model.")
 def morph_hybrid(q: NEMOQuery,
@@ -469,14 +471,14 @@ def morph_hybrid(q: NEMOQuery,
     return response
 
 
-@app.post("/morph_hybrid_align_tokens/",
+@app.post("/morph_hybrid_align_tokens",
          response_model=List[MorphHybridDoc] ,
          summary="Segment using hybrid method (w/ token-multi). Then get NER labels with morph model + align with tokens to get token-level NER.")
 def morph_hybrid_align_tokens(q: NEMOQuery,
                               multi_model_name: Optional[MultiModelName]=multi_model_query,
                               morph_model_name: Optional[MorphModelName]=morph_model_query,
                               tokenized: Optional[bool] = tokenized_query):
-    return morph_hybrid(q.sentences, multi_model_name, morph_model_name, tokenized, align_tokens=True)
+    return morph_hybrid(q, multi_model_name, morph_model_name, align_tokens=True)
 
 
 #
