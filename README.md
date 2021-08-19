@@ -6,6 +6,7 @@ Table of Contents
 * [Introduction](#introduction)
 * [Main Features](#main-features)
 * [Setup](#setup)
+* [Setup Using Docker](#setup-using-docker)
 * [Basic Usage](#basic-usage)
 * [Models and Scenarios](#models-and-scenarios)
 * [Important Notes](#important-notes)
@@ -28,7 +29,7 @@ Code and models for neural modeling of Hebrew NER. Described in the TACL paper [
 
 
 ## Setup
-### Pre-requisites:
+### Prerequisites:
 
 1. Clone this NEMO repo: `git clone https://github.com/OnlpLab/NEMO.git`
 1. Enter the repo directory: `cd NEMO`
@@ -42,6 +43,12 @@ Code and models for neural modeling of Hebrew NER. Described in the TACL paper [
 
 ### To run on file input (CLI): `nemo.py`
 1. Change `YAP_PATH` in `config.py` to the path of your local `yap` executable.
+
+
+## Setup Using Docker
+1. `docker-compose up` (pulls, builds and/or startup will take a few minutes, depending on your bandwidth)
+1. That's it. You now have NEMO API running and available at local port `8090`.
+   1. YAP API docker is also running in the background, you can make it available by uncommenting the last two lines of `docker-compose.yml`.
 
 
 ## Basic Usage
