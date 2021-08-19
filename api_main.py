@@ -224,15 +224,15 @@ class MorphModelName(str, Enum):
 
 
 #query objects for FastAPI documentation
-sent_query = Query( None,
-                    description="Hebrew sentences seprated by '\\n'",
-                    example="עשרות אנשים מגיעים מתאילנד לישראל.\nתופעה זו התבררה אתמול בוועדת העבודה והרווחה של הכנסת.",
-                  )
+# sent_query = Query( None,
+#                     description="Hebrew sentences seprated by '\\n'",
+#                     example="עשרות אנשים מגיעים מתאילנד לישראל.\nתופעה זו התבררה אתמול בוועדת העבודה והרווחה של הכנסת.",
+#                   )
 
 
-tokenized_query = Query( False,
-                    description="Are sentences pre-tokenized? If so, we split each sentence by space char. Else, we use a built in tokenizer."
-                  )
+# tokenized_query = Query( False,
+#                     description="Are sentences pre-tokenized? If so, we split each sentence by space char. Else, we use a built in tokenizer."
+#                   )
 
 
 multi_model_query = Query(MultiModelName.token_multi,
