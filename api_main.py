@@ -224,15 +224,15 @@ class MorphModelName(str, Enum):
 
 
 #query objects for FastAPI documentation
-sent_query = Query( None,
-                    description="Hebrew sentences seprated by '\\n'",
-                    example="עשרות אנשים מגיעים מתאילנד לישראל.\nתופעה זו התבררה אתמול בוועדת העבודה והרווחה של הכנסת.",
-                  )
+# sent_query = Query( None,
+#                     description="Hebrew sentences seprated by '\\n'",
+#                     example="עשרות אנשים מגיעים מתאילנד לישראל.\nתופעה זו התבררה אתמול בוועדת העבודה והרווחה של הכנסת.",
+#                   )
 
 
-tokenized_query = Query( False,
-                    description="Are sentences pre-tokenized? If so, we split each sentence by space char. Else, we use a built in tokenizer."
-                  )
+# tokenized_query = Query( False,
+#                     description="Are sentences pre-tokenized? If so, we split each sentence by space char. Else, we use a built in tokenizer."
+#                   )
 
 
 multi_model_query = Query(MultiModelName.token_multi,
@@ -243,6 +243,18 @@ multi_model_query = Query(MultiModelName.token_multi,
 morph_model_query = Query(MorphModelName.morph,
                           description="Name of an available morph model.",
                   )
+
+class NEMOQuery(BaseModel):
+    sentences: str
+    tokenized: Optional[bool]= False
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "sentences": "עשרות אנשים מגיעים מתאילנד לישראל.\nתופעה זו התבררה אתמול בוועדת העבודה והרווחה של הכנסת.",
+                "tokenized": False,
+            }
+        }
 
 
 #response models
@@ -294,16 +306,16 @@ def load_all_models():
         loaded_models[model] = m
 
 
-@app.get("/run_ner_model/",
+@app.post("/run_ner_model",
          response_model=List[NCRFPreds],
          summary="Get NER sequence label predictions, no morphological segmentation"
         )
-def run_ner_model(sentences: str=sent_query,
-                  model_name: ModelName=ModelName.token_single,
-                  tokenized: Optional[bool]=tokenized_query):
+def run_ner_model(q: NEMOQuery, 
+                   model_name: Optional[ModelName]=ModelName.token_single,
+                   ):
     model = loaded_models[model_name]
     temp_input = temporary_filename()
-    tok_sents = create_input_file(sentences, temp_input, tokenized)
+    tok_sents = create_input_file(q.sentences, temp_input, q.tokenized)
     preds = ncrf_decode(model['model'], model['data'], temp_input)
     response = []
     for t, p in zip(tok_sents, preds):
@@ -312,13 +324,13 @@ def run_ner_model(sentences: str=sent_query,
     return response
 
 
-@app.get("/multi_to_single/", response_model=List[TokenMultiDoc],
+@app.post("/multi_to_single", response_model=List[TokenMultiDoc],
          summary="Use token-multi model to get token-level NER labels. No morphological segmentation."
         )
-def multi_to_single(sentences: str=sent_query,
+def multi_to_single(q: NEMOQuery,
                     multi_model_name: Optional[MultiModelName]=multi_model_query,
-                    tokenized: Optional[bool]=tokenized_query):
-    model_out = run_ner_model(sentences, multi_model_name, tokenized)
+                    ):
+    model_out = run_ner_model(q, multi_model_name)
     tok_sents, ner_multi_preds = zip(*[(x.tokenized_text, x.ncrf_preds) for x in model_out])
     ner_single_preds = [[fix_multi_biose(label) for label in sent] for sent in ner_multi_preds]
 
@@ -331,14 +343,14 @@ def multi_to_single(sentences: str=sent_query,
     return response
 
 
-@app.get("/multi_align_hybrid/",
+@app.post("/multi_align_hybrid",
          response_model=List[HybridDoc],
          summary="Use token-multi model for MD and NER labels"
         )
-def multi_align_hybrid(sentences: str=sent_query,
+def multi_align_hybrid(q: NEMOQuery,
                        multi_model_name: Optional[MultiModelName]=multi_model_query,
-                       tokenized: Optional[bool]=tokenized_query):
-    model_out = run_ner_model(sentences, multi_model_name, tokenized)
+                       ):
+    model_out = run_ner_model(q, multi_model_name)
     tok_sents, ner_multi_preds = zip(*[(x.tokenized_text, x.ncrf_preds) for x in model_out])
     ner_single_preds = [[fix_multi_biose(label) for label in sent] for sent in ner_multi_preds]
     ma_lattice = run_yap_hebma(tok_sents)
@@ -365,14 +377,14 @@ def multi_align_hybrid(sentences: str=sent_query,
     return response
 
 
-@app.get("/morph_yap/",
+@app.post("/morph_yap",
          response_model=List[MorphNERDoc],
          summary="Standard pipeline - use yap for morpho-syntax, then use NER morph model for NER labels"
         )
-def morph_yap(sentences: str=sent_query,
+def morph_yap(q: NEMOQuery,
               morph_model_name: Optional[MorphModelName]=morph_model_query,
-              tokenized: Optional[bool]=tokenized_query):
-    tok_sents = get_sents(sentences, tokenized)
+              ):
+    tok_sents = get_sents(q.sentences, q.tokenized)
     yap_out = run_yap_joint(tok_sents)
     md_sents = (bclm.get_sentences_list(nemo.read_lattices(yap_out['md_lattice']), ['form']).apply(lambda x: [t[0] for t in x] )).to_list()
     model = loaded_models[morph_model_name]
@@ -397,15 +409,14 @@ def morph_yap(sentences: str=sent_query,
 flatten = lambda l: [item for sublist in l for item in sublist]
 
 
-@app.get("/morph_hybrid/",
+@app.post("/morph_hybrid",
          response_model=List[MorphHybridDoc] ,
          summary="Segment using hybrid method (w/ token-multi). Then get NER labels with morph model.")
-def morph_hybrid(sentences: str=sent_query,
+def morph_hybrid(q: NEMOQuery,
                  multi_model_name: Optional[MultiModelName]=multi_model_query,
                  morph_model_name: Optional[MorphModelName]=morph_model_query,
-                 tokenized: Optional[bool]=tokenized_query,
                  align_tokens: Optional[bool] = False):
-    model_out = run_ner_model(sentences, multi_model_name, tokenized)
+    model_out = run_ner_model(q, multi_model_name)
     tok_sents, ner_multi_preds = zip(*[(x.tokenized_text, x.ncrf_preds) for x in model_out])
     ner_single_preds = [[fix_multi_biose(label) for label in sent] for sent in ner_multi_preds]
     ma_lattice = run_yap_hebma(tok_sents)
@@ -460,18 +471,18 @@ def morph_hybrid(sentences: str=sent_query,
     return response
 
 
-@app.get("/morph_hybrid_align_tokens/",
+@app.post("/morph_hybrid_align_tokens",
          response_model=List[MorphHybridDoc] ,
          summary="Segment using hybrid method (w/ token-multi). Then get NER labels with morph model + align with tokens to get token-level NER.")
-def morph_hybrid_align_tokens(sentences: str=sent_query,
+def morph_hybrid_align_tokens(q: NEMOQuery,
                               multi_model_name: Optional[MultiModelName]=multi_model_query,
                               morph_model_name: Optional[MorphModelName]=morph_model_query,
-                              tokenized: Optional[bool] = tokenized_query):
-    return morph_hybrid(sentences, multi_model_name, morph_model_name, tokenized, align_tokens=True)
+                              ):
+    return morph_hybrid(q, multi_model_name, morph_model_name, align_tokens=True)
 
 
 #
-# @app.get("/run_separate_nemo/")
+# @app.post("/run_separate_nemo/")
 # def run_separate_nemo(command: str, model_name: str, sentence: str):
 #     if command in available_commands:
 #         if command == 'run_ner_model':
