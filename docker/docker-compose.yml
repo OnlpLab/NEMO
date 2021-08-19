@@ -1,0 +1,18 @@
+version: "3.9"
+   
+services:
+  nemo:
+    image: cjer/nemo
+    working_dir: /nemo/NEMO
+    command: uvicorn api_main:app --port 8090 --host 0.0.0.0
+    ports: 
+      - "8090:8090"
+    environment:
+      - YAP_API_HOST=yap
+      - YAP_API_PORT=8000
+    depends_on:
+      - yap
+  yap:
+    image: cjer/yap
+    working_dir: /yap/src/yap
+    command: ./yap api
