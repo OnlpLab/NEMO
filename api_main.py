@@ -477,7 +477,7 @@ def morph_hybrid(q: NEMOQuery,
 def morph_hybrid_align_tokens(q: NEMOQuery,
                               multi_model_name: Optional[MultiModelName]=multi_model_query,
                               morph_model_name: Optional[MorphModelName]=morph_model_query,
-                              tokenized: Optional[bool] = tokenized_query):
+                              ):
     return morph_hybrid(q, multi_model_name, morph_model_name, align_tokens=True)
 
 
