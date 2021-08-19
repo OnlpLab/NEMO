@@ -1,0 +1,8 @@
+**/.git
+.gitignore
+.dockerignore
+docker-compose.yml
+LICENSE
+README.md
+yap_docker
+NEMO-Corpus

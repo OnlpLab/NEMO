@@ -19,6 +19,3 @@ RUN cd /yap/src/yap \
 	&& go get .
 RUN cd /yap/src/yap \
 	&& go build .
-
-EXPOSE 8000
-

@@ -5,16 +5,14 @@ RUN apt-get --no-install-recommends -y install git \
 	ca-certificates
 RUN update-ca-certificates
 
-RUN mkdir -p /nemo \
-	&& cd /nemo \ 
-	&& git clone --depth 1 https://github.com/OnlpLab/NEMO.git
+COPY . /NEMO
 
-WORKDIR /nemo/NEMO/
+WORKDIR /NEMO/
 
-RUN cd /nemo/NEMO/ \ 
-	&& gunzip data/*.gz
+RUN cd /NEMO/ \ 
+	&& gunzip data/*.gz || true
 	
 RUN apt-get --no-install-recommends -y install python3-pip
 RUN rm -rf /var/lib/apt/lists/*
-RUN cd /nemo/NEMO/ \ 
+RUN cd /NEMO/ \ 
 	&& pip install -r requirements_cpu_only.txt -f https://download.pytorch.org/whl/torch_stable.html

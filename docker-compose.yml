@@ -3,7 +3,8 @@ version: "3.9"
 services:
   nemo:
     image: cjer/nemo
-    working_dir: /nemo/NEMO
+    build: .
+    working_dir: /NEMO
     command: uvicorn api_main:app --port 8090 --host 0.0.0.0
     ports: 
       - "8090:8090"
@@ -14,5 +15,9 @@ services:
       - yap
   yap:
     image: cjer/yap
+    build: ./yap_docker
     working_dir: /yap/src/yap
     command: ./yap api
+# add this if you want yap available externally as well
+#    ports: 
+#      - "8000:8000"
