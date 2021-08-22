@@ -6,4 +6,4 @@ requests>=2.26.0,<3
 torch>=1.9.0,<2
 uvicorn>=0.14.0,<1
 conllu>=4.4,<5
-bclm>=1.0.1
+bclm>=1.0.2
