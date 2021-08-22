@@ -29,19 +29,6 @@ def tokenize_text(text):
             toks = bclm.tokenize(line.rstrip())
             sents.append(toks)
     return sents
-        
-def read_lattice(lattice):
-    df = pd.read_csv(StringIO(lattice), sep='\t', header=None, quoting=3, 
-                               names = ['ID1', 'ID2', 'form', 'lemma', 'upostag', 'xpostag', 'feats', 'token_id'])
-    return df
-
-
-def read_lattices(lattices):
-    dfs = []
-    for i, sent in enumerate(lattices.split('\n\n')):
-        dfs.append(read_lattice(sent).assign(sent_id = i+1))
-    
-    return pd.concat(dfs).reset_index(drop=True)
 
 
 def write_tokens_file(sents, file_path, dummy_o=False, only_tokens=False):

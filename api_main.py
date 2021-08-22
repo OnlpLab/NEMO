@@ -13,6 +13,7 @@ import networkx as nx
 import bclm
 from ne_evaluate_mentions import fix_multi_biose
 from enum import Enum
+from io import StringIO
 
 os.environ['CUDA_VISIBLE_DEVICES'] = ''
 
@@ -117,7 +118,7 @@ def get_biose_count(ner_multi_preds):
 
 def prune_lattice(ma_lattice, ner_multi_preds):
     bc = get_biose_count(ner_multi_preds)
-    lat = nemo.read_lattices(ma_lattice)
+    lat = bclm.read_lattices(StringIO(ma_lattice))
     valid_edges = nemo.get_valid_edges(lat, bc, non_o_only=False, keep_all_if_no_valid=True)
     cols = ['sent_id', 'token_id', 'ID1', 'ID2']
     pruned_lat = lat[lat[cols].apply(lambda x: tuple(x), axis=1).isin(valid_edges)]
@@ -136,7 +137,7 @@ def to_lattices_str(df, cols = ['ID1', 'ID2', 'form', 'lemma', 'upostag', 'xpost
     
 def soft_merge_bio_labels(ner_multi_preds, md_lattices):
     multitok_sents = bclm.get_sentences_list(get_biose_count(ner_multi_preds), ['biose'])
-    md_sents = bclm.get_sentences_list(bclm.get_token_df(nemo.read_lattices(md_lattices), fields=['form'], token_fields=['sent_id', 'token_id'], add_set=False), ['token_id', 'form'])
+    md_sents = bclm.get_sentences_list(bclm.get_token_df(bclm.read_lattices(StringIO(md_lattices)), fields=['form'], token_fields=['sent_id', 'token_id'], add_set=False), ['token_id', 'form'])
     new_sents = []
     for (i, mul_sent), (sent_id, md_sent) in zip(multitok_sents.iteritems(), md_sents.iteritems()):
         new_sent = []
@@ -357,7 +358,7 @@ def multi_align_hybrid(q: NEMOQuery,
     pruned_lattice = prune_lattice(ma_lattice, ner_multi_preds)
     md_lattice = run_yap_md(pruned_lattice) #TODO: this should be joint, but there is currently no joint on MA in yap api
     dep_tree = run_yap_dep(md_lattice) # instead, we run yap as pipeline md->dep
-    md_sents = (bclm.get_sentences_list(nemo.read_lattices(md_lattice), ['form']).apply(lambda x: [t[0] for t in x] )).to_list()
+    md_sents = (bclm.get_sentences_list(bclm.read_lattices(StringIO(md_lattice)), ['form']).apply(lambda x: [t[0] for t in x] )).to_list()
     morph_aligned_preds = align_multi_md(ner_multi_preds, md_lattice)
     
     response = []
@@ -386,7 +387,7 @@ def morph_yap(q: NEMOQuery,
               ):
     tok_sents = get_sents(q.sentences, q.tokenized)
     yap_out = run_yap_joint(tok_sents)
-    md_sents = (bclm.get_sentences_list(nemo.read_lattices(yap_out['md_lattice']), ['form']).apply(lambda x: [t[0] for t in x] )).to_list()
+    md_sents = (bclm.get_sentences_list(bclm.read_lattices(StringIO(yap_out['md_lattice'])), ['form']).apply(lambda x: [t[0] for t in x] )).to_list()
     model = loaded_models[morph_model_name]
     temp_input = temporary_filename()
     nemo.write_tokens_file(md_sents, temp_input, dummy_o=True)
@@ -424,7 +425,7 @@ def morph_hybrid(q: NEMOQuery,
     md_lattice = run_yap_md(pruned_lattice) #TODO: this should be joint, but there is currently no joint on MA in yap api
     dep_tree = run_yap_dep(md_lattice) # instead, we run yap as pipeline md->dep
     morph_aligned_preds = align_multi_md(ner_multi_preds, md_lattice)
-    md_sents = (bclm.get_sentences_list(nemo.read_lattices(md_lattice), ['form']).apply(lambda x: [t[0] for t in x] )).to_list()
+    md_sents = (bclm.get_sentences_list(bclm.read_lattices(StringIO(md_lattice)), ['form']).apply(lambda x: [t[0] for t in x] )).to_list()
     model = loaded_models[morph_model_name]
     temp_input = temporary_filename()
     nemo.write_tokens_file(md_sents, temp_input, dummy_o=True)
@@ -443,7 +444,7 @@ def morph_hybrid(q: NEMOQuery,
         } 
     
     if align_tokens:
-        md_sents_for_align = (bclm.get_sentences_list(nemo.read_lattices(md_lattice), ['token_id']).apply(lambda x: [t[0] for t in x] )).to_list()
+        md_sents_for_align = (bclm.get_sentences_list(bclm.read_lattices(StringIO(md_lattice)), ['token_id']).apply(lambda x: [t[0] for t in x] )).to_list()
         tok_aligned_sents = flatten([[(sent_id, m, p) for (m,p) in zip(m_sent, p_sent)] for sent_id, (m_sent, p_sent) in enumerate(zip(md_sents_for_align, morph_preds))])
         tok_aligned_df = pd.DataFrame(tok_aligned_sents, columns=['sent_id', 'token_id', 'biose'])
         new_toks = bclm.get_token_df(tok_aligned_df, fields=['biose'], token_fields=['sent_id', 'token_id'])
