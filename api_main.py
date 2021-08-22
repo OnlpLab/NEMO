@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, HTTPException
 from pydantic import BaseModel
 import pandas as pd
 from typing import Optional, List
@@ -76,7 +76,10 @@ def create_input_file(text, path, tokenized):
 def yap_request(route, data, host=YAP_API_HOST,
                 port=YAP_API_PORT, headers=YAP_API_HEADERS):
     url = YAP_API_URL_TEMPLATE.format(host=host, port=port)
-    return requests.get(url+route, data=data, headers=headers).json()
+    try:
+        res = requests.get(url+route, data=data, headers=headers).json()
+    except requests.exceptions.ConnectionError:
+        raise HTTPException(status_code=500, detail="YAP API unavailable. If you just started it, have a drink and give it some time to load :)")
 
 
 def run_yap_hebma(tokenized_sentences):
