@@ -7,7 +7,7 @@ Table of Contents
 * [Main Features](#main-features)
 * [Setup](#setup)
 * [Setup Using Docker](#setup-using-docker)
-* [Basic Usage](#basic-usage)
+* [Usage](#usage)
 * [Models and Scenarios](#models-and-scenarios)
 * [Important Notes](#important-notes)
 * [Training Your Own Model](#training-your-own-model)
@@ -51,7 +51,7 @@ Code and models for neural modeling of Hebrew NER. Described in the TACL paper [
    1. YAP API docker is also running in the background, you can make it available by uncommenting the last two lines of `docker-compose.yml`.
 
 
-## Basic Usage
+## Usage
 
 ### API Usage
 1. Once the API server is up,  check out the API documentation by opening (http://localhost:8090/docs) in your browser.
