@@ -39,7 +39,7 @@ Code and models for neural modeling of Hebrew NER. Described in the TACL paper [
 
 ### To run API server
 1. In YAP folder, run YAP API server `./yap api`
-1. In NEMO folder, run NEMO API server `uvicorn api_main:app --reload --port 8090`
+1. In NEMO folder, run NEMO API server `uvicorn api_main:app --port 8090`
 
 ### To run on file input (CLI): `nemo.py`
 1. Change `YAP_PATH` in `config.py` to the path of your local `yap` executable.
