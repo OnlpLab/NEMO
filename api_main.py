@@ -365,20 +365,24 @@ def multi_to_single(q: NEMOQuery,
         )
 def multi_align_hybrid(q: NEMOQuery,
                        multi_model_name: Optional[MultiModelName]=multi_model_query,
-                       ):
+                       include_dep_tree=False):
     model_out = run_ner_model(q, multi_model_name)
     tok_sents, ner_multi_preds = zip(*[(x.tokenized_text, x.ncrf_preds) for x in model_out])
     ner_single_preds = [[fix_multi_biose(label) for label in sent] for sent in ner_multi_preds]
     ma_lattice = run_yap_hebma(tok_sents)
     pruned_lattice = prune_lattice(ma_lattice, ner_multi_preds)
     md_lattice = run_yap_md(pruned_lattice) #TODO: this should be joint, but there is currently no joint on MA in yap api
-    dep_tree = run_yap_dep(md_lattice) # instead, we run yap as pipeline md->dep
+    if include_dep_tree:
+        dep_tree = run_yap_dep(md_lattice).split('\n\n') # instead, we run yap as pipeline md->dep
+    else:
+        dep_tree = [None] * len(tok_sents)
     md_sents = (bclm.get_sentences_list(bclm.read_lattices(StringIO(md_lattice)), ['form']).apply(lambda x: [t[0] for t in x] )).to_list()
     morph_aligned_preds = align_multi_md(ner_multi_preds, md_lattice)
     
     response = []
-    for t, nm, ns, ma, pr, md, mf, al in zip(tok_sents, ner_multi_preds, ner_single_preds,
+    for t, nm, ns, ma, pr, md, dep, mf, al in zip(tok_sents, ner_multi_preds, ner_single_preds,
                                              ma_lattice.split('\n\n'), pruned_lattice.split('\n\n'), md_lattice.split('\n\n'),
+                                             dep_tree,
                                              md_sents, morph_aligned_preds):
         response.append( HybridDoc( tokenized_text=t,
                                     multi_ncrf_preds=nm,
@@ -386,7 +390,7 @@ def multi_align_hybrid(q: NEMOQuery,
                                     ma_lattice=ma,
                                     pruned_lattice=pr,
                                     md_lattice=md,
-                                    dep_tree=dep_tree,
+                                    dep_tree=dep,
                                     morph_forms=mf,
                                     multi_ncrf_preds_align_morph=al,
                                     ))
@@ -431,14 +435,18 @@ flatten = lambda l: [item for sublist in l for item in sublist]
 def morph_hybrid(q: NEMOQuery,
                  multi_model_name: Optional[MultiModelName]=multi_model_query,
                  morph_model_name: Optional[MorphModelName]=morph_model_query,
-                 align_tokens: Optional[bool] = False):
+                 align_tokens: Optional[bool] = False,
+                 include_dep_tree=False):
     model_out = run_ner_model(q, multi_model_name)
     tok_sents, ner_multi_preds = zip(*[(x.tokenized_text, x.ncrf_preds) for x in model_out])
     ner_single_preds = [[fix_multi_biose(label) for label in sent] for sent in ner_multi_preds]
     ma_lattice = run_yap_hebma(tok_sents)
     pruned_lattice = prune_lattice(ma_lattice, ner_multi_preds)
     md_lattice = run_yap_md(pruned_lattice) #TODO: this should be joint, but there is currently no joint on MA in yap api
-    dep_tree = run_yap_dep(md_lattice) # instead, we run yap as pipeline md->dep
+    if include_dep_tree:
+        dep_tree = run_yap_dep(md_lattice).split('\n\n')  # instead, we run yap as pipeline md->dep
+    else:
+        dep_tree = [None] * len(tok_sents)
     morph_aligned_preds = align_multi_md(ner_multi_preds, md_lattice)
     md_sents = (bclm.get_sentences_list(bclm.read_lattices(StringIO(md_lattice)), ['form']).apply(lambda x: [t[0] for t in x] )).to_list()
     model = loaded_models[morph_model_name]
@@ -470,7 +478,7 @@ def morph_hybrid(q: NEMOQuery,
     
     response = []
     for t, nm, ns, ma, pr, md, dep, mf, al, mor, moral in zip(r['t'], r['nm'], r['ns'],
-                                             r['ma'].split('\n\n'), r['pr'].split('\n\n'), r['md'].split('\n\n'), r['dep'].split('\n\n'),
+                                             r['ma'].split('\n\n'), r['pr'].split('\n\n'), r['md'].split('\n\n'), r['dep'],
                                              r['mf'], r['al'], r['mor'], r['moral']):
         response.append( MorphHybridDoc( tokenized_text=t,
                                     multi_ncrf_preds=nm,
@@ -493,8 +501,8 @@ def morph_hybrid(q: NEMOQuery,
 def morph_hybrid_align_tokens(q: NEMOQuery,
                               multi_model_name: Optional[MultiModelName]=multi_model_query,
                               morph_model_name: Optional[MorphModelName]=morph_model_query,
-                              ):
-    return morph_hybrid(q, multi_model_name, morph_model_name, align_tokens=True)
+                              include_dep_tree=False):
+    return morph_hybrid(q, multi_model_name, morph_model_name, align_tokens=True, include_dep_tree=include_dep_tree)
 
 
 #
