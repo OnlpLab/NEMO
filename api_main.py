@@ -365,7 +365,7 @@ def multi_to_single(q: NEMOQuery,
         )
 def multi_align_hybrid(q: NEMOQuery,
                        multi_model_name: Optional[MultiModelName]=multi_model_query,
-                       include_dep_tree=False):
+                       include_dep_tree: Optional[bool]=False):
     model_out = run_ner_model(q, multi_model_name)
     tok_sents, ner_multi_preds = zip(*[(x.tokenized_text, x.ncrf_preds) for x in model_out])
     ner_single_preds = [[fix_multi_biose(label) for label in sent] for sent in ner_multi_preds]
@@ -436,7 +436,7 @@ def morph_hybrid(q: NEMOQuery,
                  multi_model_name: Optional[MultiModelName]=multi_model_query,
                  morph_model_name: Optional[MorphModelName]=morph_model_query,
                  align_tokens: Optional[bool] = False,
-                 include_dep_tree=False):
+                 include_dep_tree: Optional[bool]=False):
     model_out = run_ner_model(q, multi_model_name)
     tok_sents, ner_multi_preds = zip(*[(x.tokenized_text, x.ncrf_preds) for x in model_out])
     ner_single_preds = [[fix_multi_biose(label) for label in sent] for sent in ner_multi_preds]
@@ -501,7 +501,7 @@ def morph_hybrid(q: NEMOQuery,
 def morph_hybrid_align_tokens(q: NEMOQuery,
                               multi_model_name: Optional[MultiModelName]=multi_model_query,
                               morph_model_name: Optional[MorphModelName]=morph_model_query,
-                              include_dep_tree=False):
+                              include_dep_tree: Optional[bool]=False):
     return morph_hybrid(q, multi_model_name, morph_model_name, align_tokens=True, include_dep_tree=include_dep_tree)
 
 
