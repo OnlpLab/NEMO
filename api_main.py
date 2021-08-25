@@ -1,5 +1,3 @@
-from fastapi import FastAPI, Query, HTTPException
-from pydantic import BaseModel
 import pandas as pd
 from typing import Optional, List
 from tempfile import mkstemp
@@ -23,10 +21,24 @@ import torch
 from model.seqlabel import SeqLabel
 from ncrf_main import evaluate
 
+#fastapi stuff
+from fastapi import FastAPI, Query, HTTPException
+from pydantic import BaseModel
+from concurrent.futures import ThreadPoolExecutor
+import asyncio
+
+# deal with exploding thread count
+# taken from https://github.com/tiangolo/fastapi/issues/603#issuecomment-545075929
+loop = asyncio.get_running_loop()
+loop.set_default_executor(ThreadPoolExecutor(max_workers=MAX_THREADS_FASTAPI))
+
+
+#get yap location from env vars
 if 'YAP_API_HOST' in os.environ and os.environ['YAP_API_HOST']:
     YAP_API_HOST = os.environ['YAP_API_HOST']
 if 'YAP_API_PORT' in os.environ and os.environ['YAP_API_PORT']:
     YAP_API_PORT = os.environ['YAP_API_PORT']
+
 
 def get_ncrf_data_object(model_name): #, input_path, output_path):
     data = Data()

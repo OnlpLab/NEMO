@@ -27,3 +27,5 @@ YAP_API_PORT = '8000'
 YAP_API_URL_TEMPLATE = 'http://{host}:{port}'
 
 YAP_API_HEADERS = {'content-type': 'application/json'}
+
+MAX_THREADS_FASTAPI = 5
