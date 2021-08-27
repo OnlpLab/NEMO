@@ -143,7 +143,7 @@ def soft_merge_bio_labels(multitok_sents, tokmorph_sents, verbose=False):
 
 def align_multitok(ner_pred_path, tokens_path, conll_path, map_path, output_path):
     x = read_file_sents(ner_pred_path, fix_multi_tag=False)
-    prun_yo = bclm.read_yap_output(treebank_set=None, tokens_path=tokens_path, dep_path=conll_path, map_path=map_path)
+    prun_yo = bclm.read_yap_output(treebank_set=None, tokens_filepath_or_buffer=tokens_path, dep_filepath_or_buffer=conll_path, map_filepath_or_buffer=map_path)
     prun_yo = bclm.get_token_df(prun_yo, fields=['form'])
     prun_sents = bclm.get_sentences_list(prun_yo, fields=['token_id', 'token_str', 'form'])
     new_sents = soft_merge_bio_labels(x, prun_sents, verbose=False)
@@ -356,9 +356,9 @@ def run_morph_hybrid(model_name, input_path, output_path, align_tokens=False):
         
         if align_tokens:
             prun_yo = bclm.read_yap_output(treebank_set=None,
-                                       tokens_path=temp_tokens_path,
-                                       dep_path=temp_conll_path,
-                                       map_path=temp_map_path,
+                                       tokens_filepath_or_buffer=temp_tokens_path,
+                                       dep_filepath_or_buffer=temp_conll_path,
+                                       map_filepath_or_buffer=temp_map_path,
                                         )
             prun_sents = bclm.get_sentences_list(prun_yo, fields=['token_id', 'token_str'])
             new_toks = get_fixed_tok(temp_morph_ner_output_path, orig_sents=prun_sents)
