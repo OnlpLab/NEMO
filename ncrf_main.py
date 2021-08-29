@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 # @Author: Jie
 # @Date:   2017-06-15 14:11:08
-# @Last Modified by:   Jie Yang,     Contact: jieynlp@gmail.com
-# @Last Modified time: 2019-02-13 12:41:44
+# @Last Modified by:   Dan Bareket,     Contact: dbareket@gmail.com
+# @Last Modified time: 2020-08-29 18:08
 
 from __future__ import print_function
 import time
