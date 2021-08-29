@@ -132,7 +132,7 @@ def lr_decay(optimizer, epoch, decay_rate, init_lr):
 
 
 
-def evaluate(data, model, name, nbest=None):
+def evaluate(data, model, name, nbest=None, calc_fmeasure=True):
     if name == "train":
         instances = data.train_Ids
     elif name == "dev":
@@ -179,8 +179,14 @@ def evaluate(data, model, name, nbest=None):
         pred_results += pred_label
         gold_results += gold_label
     decode_time = time.time() - start_time
-    speed = len(instances)/decode_time
-    acc, p, r, f = get_ner_fmeasure(gold_results, pred_results, data.tagScheme, verbose=False)
+    if decode_time:
+        speed = len(instances)/decode_time
+    else:
+        speed = -1
+    if calc_fmeasure:
+        acc, p, r, f = get_ner_fmeasure(gold_results, pred_results, data.tagScheme, verbose=False)
+    else:
+        acc, p, r, f = (1, 1, 1, 1)
     if nbest and not data.sentence_classification:
         return speed, acc, p, r, f, nbest_pred_results, pred_scores
     return speed, acc, p, r, f, pred_results, pred_scores

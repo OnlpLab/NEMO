@@ -64,7 +64,7 @@ def ncrf_decode(model, data, temp_input):
     data.raw_dir = temp_input
     #data.decode_dir = temp_output
     data.generate_instance('raw')
-    _, _, _, _, _, preds, _ = evaluate(data, model, 'raw', data.nbest)
+    _, _, _, _, _, preds, _ = evaluate(data, model, 'raw', data.nbest, calc_fmeasure=False)
     if data.nbest==1:
         preds = [sent[0] for sent in preds]
     return preds
@@ -329,6 +329,8 @@ def load_all_models():
 def run_ner_model(q: NEMOQuery, 
                    model_name: Optional[ModelName]=ModelName.token_single,
                    ):
+    if not q.sentences.strip():
+        return []
     model = loaded_models[model_name]
     temp_input = temporary_filename()
     tok_sents = create_input_file(q.sentences, temp_input, q.tokenized)
@@ -346,6 +348,8 @@ def run_ner_model(q: NEMOQuery,
 def multi_to_single(q: NEMOQuery,
                     multi_model_name: Optional[MultiModelName]=multi_model_query,
                     ):
+    if not q.sentences.strip():
+        return []
     model_out = run_ner_model(q, multi_model_name)
     tok_sents, ner_multi_preds = zip(*[(x.tokenized_text, x.ncrf_preds) for x in model_out])
     ner_single_preds = [[fix_multi_biose(label) for label in sent] for sent in ner_multi_preds]
@@ -366,6 +370,8 @@ def multi_to_single(q: NEMOQuery,
 def multi_align_hybrid(q: NEMOQuery,
                        multi_model_name: Optional[MultiModelName]=multi_model_query,
                        include_dep_tree: Optional[bool]=False):
+    if not q.sentences.strip():
+        return []
     model_out = run_ner_model(q, multi_model_name)
     tok_sents, ner_multi_preds = zip(*[(x.tokenized_text, x.ncrf_preds) for x in model_out])
     ner_single_preds = [[fix_multi_biose(label) for label in sent] for sent in ner_multi_preds]
@@ -404,6 +410,8 @@ def multi_align_hybrid(q: NEMOQuery,
 def morph_yap(q: NEMOQuery,
               morph_model_name: Optional[MorphModelName]=morph_model_query,
               ):
+    if not q.sentences.strip():
+        return []
     tok_sents = get_sents(q.sentences, q.tokenized)
     yap_out = run_yap_joint(tok_sents)
     md_sents = (bclm.get_sentences_list(bclm.read_lattices(StringIO(yap_out['md_lattice'])), ['form']).apply(lambda x: [t[0] for t in x] )).to_list()
@@ -437,6 +445,8 @@ def morph_hybrid(q: NEMOQuery,
                  morph_model_name: Optional[MorphModelName]=morph_model_query,
                  align_tokens: Optional[bool] = False,
                  include_dep_tree: Optional[bool]=False):
+    if not q.sentences.strip():
+        return []
     model_out = run_ner_model(q, multi_model_name)
     tok_sents, ner_multi_preds = zip(*[(x.tokenized_text, x.ncrf_preds) for x in model_out])
     ner_single_preds = [[fix_multi_biose(label) for label in sent] for sent in ner_multi_preds]
