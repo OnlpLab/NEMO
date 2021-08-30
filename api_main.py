@@ -29,8 +29,11 @@ import asyncio
 
 # deal with exploding thread count
 # taken from https://github.com/tiangolo/fastapi/issues/603#issuecomment-545075929
-loop = asyncio.get_running_loop()
-loop.set_default_executor(ThreadPoolExecutor(max_workers=MAX_THREADS_FASTAPI))
+try: 
+    loop = asyncio.get_running_loop()
+    loop.set_default_executor(ThreadPoolExecutor(max_workers=MAX_THREADS_FASTAPI))
+except:
+    print("No running asyncio event loop...")
 
 
 #get yap location from env vars
@@ -49,7 +52,7 @@ def get_ncrf_data_object(model_name): #, input_path, output_path):
     #data.raw_dir = input_path
     #data.decode_dir = output_path
     data.load_model_dir = model['model']
-    data.nbest = 1
+    data.nbest = None
     return data
 
 
@@ -64,7 +67,7 @@ def ncrf_decode(model, data, temp_input):
     data.raw_dir = temp_input
     #data.decode_dir = temp_output
     data.generate_instance('raw')
-    _, _, _, _, _, preds, _ = evaluate(data, model, 'raw', data.nbest, calc_fmeasure=False)
+    _, _, _, _, _, preds, _ = evaluate(data, model, 'raw', nbest=data.nbest, calc_fmeasure=False)
     if data.nbest==1:
         preds = [sent[0] for sent in preds]
     return preds
@@ -144,15 +147,19 @@ def prune_lattice(ma_lattice, ner_multi_preds):
 def to_lattices_str(df, cols = ['ID1', 'ID2', 'form', 'lemma', 'upostag', 'xpostag', 'feats', 'token_id']):
     lat = ''
     for _, sent in df.groupby('sent_id'):
-        for _, row in sent[cols].iterrows():
-            lat += '\t'.join(row.astype(str).tolist())+'\n'
+        for row in sent[cols].astype(str).itertuples(index=False):
+            lat += '\t'.join(row)+'\n'
         lat += '\n'
     return lat
             
     
 def soft_merge_bio_labels(ner_multi_preds, md_lattices):
     multitok_sents = bclm.get_sentences_list(get_biose_count(ner_multi_preds), ['biose'])
-    md_sents = bclm.get_sentences_list(bclm.get_token_df(bclm.read_lattices(StringIO(md_lattices)), fields=['form'], token_fields=['sent_id', 'token_id'], add_set=False), ['token_id', 'form'])
+    md_sents = bclm.get_sentences_list(
+                                        _get_token_df(bclm.read_lattices(StringIO(md_lattices)), 
+                                                            fields=['form'], token_fields=['sent_id', 'token_id'], add_set=False),
+                                        ['token_id', 'form']
+                                    )
     new_sents = []
     for (i, mul_sent), (sent_id, md_sent) in zip(multitok_sents.iteritems(), md_sents.iteritems()):
         new_sent = []
@@ -196,7 +203,34 @@ def temporary_filename(suffix='tmp', dir=None, text=False, remove_on_exit=True):
         atexit.register(remove_file, path)
 
     return path
+
+
+def _get_token_df(df, fields=None, biose=None, token_fields = bclm.TOK_FIELDS, sep='^', fill_value='', add_set=True):
+    tok_dfs = []
     
+    if biose is not None:
+        for col in biose:
+            tok_dfs.append(bclm.get_token_biose(df, col))
+        
+    if fields is not None:
+        for field in fields:
+            tok_fields = (df.fillna(fill_value)
+                    .groupby(token_fields)[field]
+                    .apply(sep.join))
+            tok_dfs.append(tok_fields)
+    tok_df = pd.concat(tok_dfs, axis=1)
+
+    if add_set and 'set' in df.columns:
+            tok_df = tok_df.assign(set = lambda x: (x.index
+                                                     .get_level_values('sent_id')
+                                                     .map(df[['sent_id', 'set']]
+                                                     .drop_duplicates()
+                                                     .set_index('sent_id')['set'])))
+            
+    tok_df = tok_df.sort_index().reset_index()
+    
+    return tok_df
+
 
 description = """
 NEMO API helps you do awesome stuff with Hebrew named entities and morphology 🐠
@@ -262,7 +296,7 @@ morph_model_query = Query(MorphModelName.morph,
 
 class NEMOQuery(BaseModel):
     sentences: str
-    tokenized: Optional[bool]= False
+    tokenized: Optional[bool] = False
 
     class Config:
         schema_extra = {
@@ -480,7 +514,7 @@ def morph_hybrid(q: NEMOQuery,
         md_sents_for_align = (bclm.get_sentences_list(bclm.read_lattices(StringIO(md_lattice)), ['token_id']).apply(lambda x: [t[0] for t in x] )).to_list()
         tok_aligned_sents = flatten([[(sent_id, m, p) for (m,p) in zip(m_sent, p_sent)] for sent_id, (m_sent, p_sent) in enumerate(zip(md_sents_for_align, morph_preds))])
         tok_aligned_df = pd.DataFrame(tok_aligned_sents, columns=['sent_id', 'token_id', 'biose'])
-        new_toks = bclm.get_token_df(tok_aligned_df, fields=['biose'], token_fields=['sent_id', 'token_id'])
+        new_toks = _get_token_df(tok_aligned_df, fields=['biose'], token_fields=['sent_id', 'token_id'])
         new_toks['fixed_bio'] = new_toks.biose.apply(lambda x: nemo.get_fixed_bio_sequence(tuple(x.split('^'))))
         tok_aligned = (bclm.get_sentences_list(new_toks, ['fixed_bio']).apply(lambda x: [t[0] for t in x] )).to_list()
         r['moral'] = tok_aligned
