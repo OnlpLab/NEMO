@@ -29,8 +29,11 @@ import asyncio
 
 # deal with exploding thread count
 # taken from https://github.com/tiangolo/fastapi/issues/603#issuecomment-545075929
-loop = asyncio.get_running_loop()
-loop.set_default_executor(ThreadPoolExecutor(max_workers=MAX_THREADS_FASTAPI))
+try: 
+    loop = asyncio.get_running_loop()
+    loop.set_default_executor(ThreadPoolExecutor(max_workers=MAX_THREADS_FASTAPI))
+except:
+    print("No running asyncio event loop...")
 
 
 #get yap location from env vars
