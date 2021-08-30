@@ -52,7 +52,7 @@ def get_ncrf_data_object(model_name): #, input_path, output_path):
     #data.raw_dir = input_path
     #data.decode_dir = output_path
     data.load_model_dir = model['model']
-    data.nbest = 1
+    data.nbest = None
     return data
 
 
@@ -67,7 +67,7 @@ def ncrf_decode(model, data, temp_input):
     data.raw_dir = temp_input
     #data.decode_dir = temp_output
     data.generate_instance('raw')
-    _, _, _, _, _, preds, _ = evaluate(data, model, 'raw', data.nbest, calc_fmeasure=False)
+    _, _, _, _, _, preds, _ = evaluate(data, model, 'raw', nbest=data.nbest, calc_fmeasure=False)
     if data.nbest==1:
         preds = [sent[0] for sent in preds]
     return preds
