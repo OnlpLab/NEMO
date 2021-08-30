@@ -79,15 +79,11 @@ def get_valid_edges(lattices, bc,
                     non_o_only=True, keep_all_if_no_valid=True):
     valid_edges = []
     for (i, df), (_, biose, biose_count) in zip(lattices.groupby(['sent_id', 'token_id']), 
-                                                bc[['biose', 'biose_count']].itertuples()):
-        el = df[['ID1', 'ID2']].rename(columns={'ID1': 'source', 'ID2': 'target'})
-        #min_node = [n for n,v in G.nodes(data=True) if v['since'] == 'December 2008'][0]
+                                                bc[['biose', 'biose_count']].itertuples()):        
+        g = nx.from_pandas_edgelist(df, create_using=nx.DiGraph, source='ID1', target='ID2')
+        min_node = df.ID1.iat[0]
+        max_node = df.ID2.iat[-1]
 
-        g = nx.from_pandas_edgelist(el, create_using=nx.DiGraph)
-        min_node = el.source.min()
-        max_node = el.target.max()
-        #print(min_node,max_node)
-        #print(biose_count)
         if non_o_only and not '-' in biose:
             vp = list(nx.all_simple_paths(g, min_node, max_node))
         else:
