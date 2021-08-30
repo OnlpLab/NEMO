@@ -147,8 +147,8 @@ def prune_lattice(ma_lattice, ner_multi_preds):
 def to_lattices_str(df, cols = ['ID1', 'ID2', 'form', 'lemma', 'upostag', 'xpostag', 'feats', 'token_id']):
     lat = ''
     for _, sent in df.groupby('sent_id'):
-        for _, row in sent[cols].iterrows():
-            lat += '\t'.join(row.astype(str).tolist())+'\n'
+        for row in sent[cols].astype(str).itertuples(index=False):
+            lat += '\t'.join(row)+'\n'
         lat += '\n'
     return lat
             
