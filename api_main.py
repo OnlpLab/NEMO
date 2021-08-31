@@ -235,7 +235,12 @@ def _get_token_df(df, fields=None, biose=None, token_fields = bclm.TOK_FIELDS, s
 description = """
 NEMO API helps you do awesome stuff with Hebrew named entities and morphology 🐠
 
-All endpoints get Hebrew sentences split by a linebreak char, and return different combinations of neural NER and morpho-syntactic parsing.\\
+* All endpoints are expect an HTTP POST request
+* Request body contains a JSON with Hebrew `sentences` and optional `tokenized` flag for signaling whether they are pre-tokenized or not.
+* Request URL may include further optional path parameters for choosing models/scenarios (in all but `run_ner_model` there is no need to touch these)
+* Results are in JSON form in HTTP response body
+* Results include final and intermediate predictions, including YAP outputs (MA, MD, dependency)
+
 API schema served at [openapi.json](openapi.json)
 
 Have fun and use responsibly 😊
