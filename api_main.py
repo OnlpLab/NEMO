@@ -441,7 +441,7 @@ def multi_align_hybrid(q: NEMOQuery,
     if verbose>=Verbosity.INTERMID: 
         mul_align_tok = [[fix_multi_biose(label) for label in sent] for sent in ner_multi_preds]
         for doc, mul, mat in zip(docs, ner_multi_preds, mul_align_tok):
-            for tok, tok_mul, tok_mat in zip(doc.tokens, mul, mat):
+            for tok, tok_mul, tok_mat in zip(doc, mul, mat):
                 tok.nemo_multi = tok_mul
                 tok.nemo_multi_align_token = tok_mat
         
@@ -462,7 +462,7 @@ def multi_align_hybrid(q: NEMOQuery,
                                                         in zip(md_sent, mal_preds)] 
                                                     for md_sent, mal_preds in zip(md_sents, morph_aligned_preds) ])
     for doc, md, mora in zip(docs, tok_md_sents, tok_morph_aligned_preds):
-        for tok, tok_mor, tok_mora in zip(doc.tokens, md, mora):
+        for tok, tok_mor, tok_mora in zip(doc, md, mora):
             morphs = [ Morpheme(form=form, lemma=lemma, pos=xpostag, feats=feats,
                                  nemo_multi_align_morph=pred) 
                         for (_, form, lemma, xpostag, feats),(_, pred)
@@ -471,13 +471,13 @@ def multi_align_hybrid(q: NEMOQuery,
 
     if verbose>=Verbosity.SYNTAX:
         dep_tree = run_yap_dep(md_lattice)
-        dep_sents = get_dep_sents(dep_tree, ['id', 'head', 'deprel', 'deps'])
+        dep_sents = get_dep_sents(dep_tree, ['id', 'head', 'deprel'])
         dep_sents = [[(tid, *dep) for (tid, *_), dep in zip(md_sent, dep_sent)] 
                     for md_sent, dep_sent in zip(md_sents, dep_sents)]
         tok_dep_sents = get_token_morphs_list(dep_sents)
         for doc, tds, dep in zip(docs, tok_dep_sents, dep_tree.split('\n\n')):
-            for tok, td in zip(doc.tokens, tds):
-                for morph, (_, id, head, deprel, deps) in zip(tok.morphs, td):
+            for tok, td in zip(doc, tds):
+                for morph, (_, id, head, deprel) in zip(tok, td):
                     morph.id = id
                     morph.head = head
                     morph.deprel = deprel

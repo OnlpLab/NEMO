@@ -41,7 +41,6 @@ class Verbosity(IntEnum):
 #                                   you also get nemo_multi, nemo_multi_align_token, nemo_multi_align_morph)
 #2 - adds syntactic tree info: 'head', 'deprel', 'deps'
 #include_yap_output - adds yap raw output
-# use response_model_exclude_unset
 
 
 #response models
@@ -60,14 +59,21 @@ class Morpheme(BaseModel):
     deprel: Optional[str] = None
     #deps: Optional[str] = None
 
+
 class Token(BaseModel):
     text: str
-    # id: int
-    morphs: Optional[List[Morpheme]] = []
     nemo_single: Optional[str] = None
     nemo_multi: Optional[str] = None
     nemo_multi_align_token: Optional[str] = None
     nemo_morph_align_token: Optional[str] = None
+    # id: int
+    morphs: Optional[List[Morpheme]] = []
+
+    def __iter__(self):
+        return self.morphs.__iter__()
+
+    def __next__(self):
+        return self.morphs.__next__()
 
 
 class Doc(BaseModel):
@@ -79,6 +85,12 @@ class Doc(BaseModel):
     pruned_lattice: Optional[str] = None
     dep_tree: Optional[str] = None
     
+    def __iter__(self):
+        return self.tokens.__iter__()
+
+    def __next__(self):
+        return self.tokens.__next__()
+
     @classmethod
     def get_morphs(self):
         for i, token in enumerate(self.tokens):
