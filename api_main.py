@@ -594,26 +594,20 @@ def morph_hybrid(
     nemo.write_tokens_file(md_sents_for_ncrf, temp_input, dummy_o=True)
     morph_preds = ncrf_decode(model['model'], model['data'], temp_input)
 
-    tok_md_sents = get_token_morphs_list(md_sents)
-    tok_morph_preds = get_token_morphs_list([
+    if verbose>=Verbosity.INTERMID or align_tokens==False:
+        tok_md_sents = get_token_morphs_list(md_sents)
+        tok_morph_preds = get_token_morphs_list([
                                                     [(tid, p) for (tid, *_), p 
                                                         in zip(md_sent, mor_preds)] 
                                                     for md_sent, mor_preds 
                                                     in zip(md_sents, morph_preds) ])
-
-    if verbose>=Verbosity.INTERMID or align_tokens==False:
-        for doc, md in zip(docs, tok_md_sents):
-            for tok, tok_mor in zip(doc, md):
-                morphs = [ Morpheme(form=form, lemma=lemma, pos=xpostag, feats=feats) 
-                            for (_, form, lemma, xpostag, feats)
-                            in tok_mor]
+        for doc, md, morp in zip(docs, tok_md_sents, tok_morph_preds):
+            for tok, tok_mor, tok_morp in zip(doc, md, morp):
+                morphs = [ Morpheme(form=form, lemma=lemma, pos=xpostag, feats=feats,
+                                    nemo_morph=mp) 
+                            for (_, form, lemma, xpostag, feats), (_, mp)
+                            in zip(tok_mor, tok_morp)]
                 tok.morphs = morphs
-
-        for doc, morp in zip(docs, tok_morph_preds):
-            for tok, tok_morp in zip(doc, morp):
-                for morph, (_, pred) in zip(tok, tok_morp):
-                    morph.nemo_morph = pred
-
 
     if verbose>=Verbosity.INTERMID:
         morph_aligned_preds = align_multi_md(ner_multi_preds, md_lattice)
@@ -622,14 +616,10 @@ def morph_hybrid(
                                                             in zip(md_sent, mal_preds)] 
                                                         for md_sent, mal_preds 
                                                         in zip(md_sents, morph_aligned_preds) ])
-        for doc, md, mora in zip(docs, tok_md_sents, tok_morph_aligned_preds):
-            for tok, tok_mor, tok_mora in zip(doc, md, mora):
-                morphs = [ Morpheme(form=form, lemma=lemma, pos=xpostag, feats=feats,
-                                    nemo_multi_align_morph=pred) 
-                            for (_, form, lemma, xpostag, feats),(_, pred)
-                            in zip(tok_mor, tok_mora)]
-                tok.morphs = morphs
-
+        for doc, mora in zip(docs, tok_morph_aligned_preds):
+            for tok, tok_mora in zip(doc, mora):
+                for mor, (_, pred) in zip(tok, tok_mora):
+                    mor.nemo_multi_align_morph=pred
 
     if verbose>=Verbosity.SYNTAX:
         dep_tree = run_yap_dep(md_lattice)
