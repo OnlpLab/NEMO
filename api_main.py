@@ -635,7 +635,6 @@ def morph_hybrid(
         for doc, tok_preds in zip(docs, tok_aligned):
             for tok, tok_pred in zip(doc, tok_preds):
                 tok.nemo_morph_align_token = tok_pred
-    print (docs)
     return docs
 
 
