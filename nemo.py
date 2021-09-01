@@ -79,15 +79,11 @@ def get_valid_edges(lattices, bc,
                     non_o_only=True, keep_all_if_no_valid=True):
     valid_edges = []
     for (i, df), (_, biose, biose_count) in zip(lattices.groupby(['sent_id', 'token_id']), 
-                                                bc[['biose', 'biose_count']].itertuples()):
-        el = df[['ID1', 'ID2']].rename(columns={'ID1': 'source', 'ID2': 'target'})
-        #min_node = [n for n,v in G.nodes(data=True) if v['since'] == 'December 2008'][0]
+                                                bc[['biose', 'biose_count']].itertuples()):        
+        g = nx.from_pandas_edgelist(df, create_using=nx.DiGraph, source='ID1', target='ID2')
+        min_node = df.ID1.iat[0]
+        max_node = df.ID2.iat[-1]
 
-        g = nx.from_pandas_edgelist(el, create_using=nx.DiGraph)
-        min_node = el.source.min()
-        max_node = el.target.max()
-        #print(min_node,max_node)
-        #print(biose_count)
         if non_o_only and not '-' in biose:
             vp = list(nx.all_simple_paths(g, min_node, max_node))
         else:
@@ -143,7 +139,7 @@ def soft_merge_bio_labels(multitok_sents, tokmorph_sents, verbose=False):
 
 def align_multitok(ner_pred_path, tokens_path, conll_path, map_path, output_path):
     x = read_file_sents(ner_pred_path, fix_multi_tag=False)
-    prun_yo = bclm.read_yap_output(treebank_set=None, tokens_path=tokens_path, dep_path=conll_path, map_path=map_path)
+    prun_yo = bclm.read_yap_output(treebank_set=None, tokens_filepath_or_buffer=tokens_path, dep_filepath_or_buffer=conll_path, map_filepath_or_buffer=map_path)
     prun_yo = bclm.get_token_df(prun_yo, fields=['form'])
     prun_sents = bclm.get_sentences_list(prun_yo, fields=['token_id', 'token_str', 'form'])
     new_sents = soft_merge_bio_labels(x, prun_sents, verbose=False)
@@ -356,9 +352,9 @@ def run_morph_hybrid(model_name, input_path, output_path, align_tokens=False):
         
         if align_tokens:
             prun_yo = bclm.read_yap_output(treebank_set=None,
-                                       tokens_path=temp_tokens_path,
-                                       dep_path=temp_conll_path,
-                                       map_path=temp_map_path,
+                                       tokens_filepath_or_buffer=temp_tokens_path,
+                                       dep_filepath_or_buffer=temp_conll_path,
+                                       map_filepath_or_buffer=temp_map_path,
                                         )
             prun_sents = bclm.get_sentences_list(prun_yo, fields=['token_id', 'token_str'])
             new_toks = get_fixed_tok(temp_morph_ner_output_path, orig_sents=prun_sents)
