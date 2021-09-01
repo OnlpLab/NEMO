@@ -34,16 +34,13 @@ class Verbosity(IntEnum):
     INTERMID = 1
     SYNTAX = 2
 
-#verbosity: 
-#0 - tokens, morphemes (if morph endpoint) and final requested nemo preds
-#       - morphological features: 'form', 'lemma', 'upostag', 'xpostag', 'feats'
-#1 - adds intermediate nemo preds (for example when running morph_hybrid, 
-#                                   you also get nemo_multi, nemo_multi_align_token, nemo_multi_align_morph)
-#2 - adds syntactic tree info: 'head', 'deprel', 'deps'
-#include_yap_output - adds yap raw output
-
 
 #response models
+class NCRFPreds(BaseModel):
+    tokenized_text: List[str]
+    ncrf_preds: List[str]
+
+
 class Morpheme(BaseModel):
     form: str
     # token_id: int
@@ -62,6 +59,7 @@ class Morpheme(BaseModel):
 
 class Token(BaseModel):
     text: str
+    ncrf_preds: Optional[str] = None
     nemo_single: Optional[str] = None
     nemo_multi: Optional[str] = None
     nemo_multi_align_token: Optional[str] = None
@@ -81,8 +79,8 @@ class Doc(BaseModel):
     tokens: List[Token]
     #morphs: Optional[List[Morpheme]] = [] # better? and add token_id to Morpheme
     ma_lattice: Optional[str] = None
-    md_lattice: Optional[str] = None
     pruned_lattice: Optional[str] = None
+    md_lattice: Optional[str] = None
     dep_tree: Optional[str] = None
     
     def __iter__(self):

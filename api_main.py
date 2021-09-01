@@ -254,6 +254,20 @@ def get_dep_sents(dep_tree, cols):
                             bclm.read_conll(StringIO(dep_tree)), cols)
                             .to_list())
     return dep_sents
+def add_dep_info(docs, md_sents, dep_tree, include_yap_outputs):
+    dep_sents = get_dep_sents(dep_tree, ['id', 'head', 'deprel'])
+    dep_sents = [[(tid, *dep) for (tid, *_), dep in zip(md_sent, dep_sent)] 
+                for md_sent, dep_sent in zip(md_sents, dep_sents)]
+    tok_dep_sents = get_token_morphs_list(dep_sents)
+    for doc, tds, dep in zip(docs, tok_dep_sents, dep_tree.split('\n\n')):
+        for tok, td in zip(doc, tds):
+            for morph, (_, id, head, deprel) in zip(tok, td):
+                morph.id = id
+                morph.head = head
+                morph.deprel = deprel
+                #morph.deps = deps
+        if include_yap_outputs:
+            doc.dep_tree = dep
 
 description = """
 NEMO API helps you do awesome stuff with Hebrew named entities and morphology ðŸ 
@@ -262,7 +276,13 @@ NEMO API helps you do awesome stuff with Hebrew named entities and morphology ðŸ
 * Request body contains a JSON with Hebrew `sentences` and optional `tokenized` flag for signaling whether they are pre-tokenized or not.
 * Request URL may include further optional path parameters for choosing models/scenarios (in all but `run_ner_model` there is no need to touch these)
 * Results are in JSON form in HTTP response body
-* Results include final and intermediate predictions, including YAP outputs (MA, MD, dependency)
+* `verbose` parameter (more info &rarr; longer runtime):
+    - `0`: tokens, morphemes (if morph endpoint) and final requested nemo preds.
+        - morphological features included: `form`, `lemma`, `pos`, ', `feats`
+    - `1`: adds intermediate nemo preds 
+        - for example when running `morph_hybrid`, you also get NER preds `nemo_multi`, `nemo_multi_align_token`, `nemo_multi_align_morph`)
+    - `2` adds syntactic dependency tree features (SPMRL): `head', `deprel`
+* `include_yap_outputs` flag - adds yap raw output to each sentence
 
 API schema served at [openapi.json](openapi.json)
 
@@ -329,40 +349,11 @@ class NEMOQuery(BaseModel):
         }
 
 
-#response models
-class NEMODoc(BaseModel):
-    tokenized_text: List[str]
-
-class NCRFPreds(NEMODoc):
-    ncrf_preds: List[str]
-
-class TokenMultiDoc(NEMODoc):
-    multi_ncrf_preds: List[str]
-    multi_ncrf_preds_align_single: List[str]
-
-class MDDoc(NEMODoc):
-    ma_lattice: str
-    md_lattice: str
-    morph_forms: List[str]
-    dep_tree: Optional[str] = None
-
-class MorphNERDoc(MDDoc):
-    morph_ncrf_preds: List[str]
-    morph_ncrf_preds_align_tokens: Optional[List[str]] = None
-
-class HybridDoc(TokenMultiDoc, MDDoc):
-    pruned_lattice: str
-    multi_ncrf_preds_align_morph:  List[str]
-
-class MorphHybridDoc(HybridDoc, MorphNERDoc):
-    pass
-
-
 @app.get("/",
          summary="Get list of available command endpoints"   
         )
 def list_commands():
-    return {"message": "Please specify command in URL path.",
+    return {"message": "Please specify command in URL path in a POST request and provide some input text in the request body.",
             "available_commands": available_commands}
 
 
@@ -380,7 +371,8 @@ def load_all_models():
 
 @app.post("/run_ner_model",
          response_model=List[NCRFPreds],
-         summary="Get NER sequence label predictions, no morphological segmentation"
+         summary="Get NER sequence label predictions, no morphological segmentation",
+         response_model_exclude_unset=True
         )
 def run_ner_model(q: NEMOQuery, 
                    model_name: Optional[ModelName]=ModelName.token_single,
@@ -398,30 +390,96 @@ def run_ner_model(q: NEMOQuery,
     return response
 
 
-@app.post("/multi_to_single", response_model=List[TokenMultiDoc],
-         summary="Use token-multi model to get token-level NER labels. No morphological segmentation."
+@app.post("/multi_to_single", response_model=List[Doc],
+         summary="Use token-multi model to get token-level NER labels. No morphological segmentation.",
+         response_model_exclude_unset=True
         )
-def multi_to_single(q: NEMOQuery,
+def multi_to_single(
+                    q: NEMOQuery,
                     multi_model_name: Optional[MultiModelName]=multi_model_query,
+                    verbose: Optional[Verbosity]=verbosity_query
                     ):
     if not q.sentences.strip():
         return []
+    sents = q.sentences.split('\n')
+
     model_out = run_ner_model(q, multi_model_name)
     tok_sents, ner_multi_preds = zip(*[(x.tokenized_text, x.ncrf_preds) for x in model_out])
-    ner_single_preds = [[fix_multi_biose(label) for label in sent] for sent in ner_multi_preds]
+    mul_align_tok = [[fix_multi_biose(label) for label in sent] for sent in ner_multi_preds]
+    docs = []
+    for s, t in zip(tok_sents, sents):
+        tokens = [Token(text=t) for t in s]
+        docs.append(Doc(text=t, tokens=tokens))
+        mul_align_tok = [[fix_multi_biose(label) for label in sent] for sent in ner_multi_preds]
+        for doc, mul, mat in zip(docs, ner_multi_preds, mul_align_tok):
+            for tok, tok_mul, tok_mat in zip(doc, mul, mat):
+                if verbose>=Verbosity.INTERMID:
+                    tok.nemo_multi = tok_mul
+                tok.nemo_multi_align_token = tok_mat
+    return docs
 
-    response = []
-    for t, nm, ns in zip(tok_sents, ner_multi_preds, ner_single_preds):
-        response.append( TokenMultiDoc( tokenized_text=t,
-                                        multi_ncrf_preds=nm,
-                                        multi_ncrf_preds_align_single=ns,
-                                    ))
-    return response
+
+@app.post("/morph_yap",
+         response_model=List[Doc],
+         summary="Standard pipeline - use yap for morpho-syntax, then use NER morph model for NER labels",
+         response_model_exclude_unset=True
+        )
+def morph_yap(q: NEMOQuery,
+              morph_model_name: Optional[MorphModelName]=morph_model_query,
+              verbose: Optional[Verbosity]=verbosity_query,
+              include_yap_outputs: Optional[bool]=False):
+    if not q.sentences.strip():
+        return []
+    sents = q.sentences.split('\n')
+    tok_sents = get_sents(q.sentences, q.tokenized)
+    docs = []
+    for s, t in zip(tok_sents, sents):
+        tokens = [Token(text=t) for t in s]
+        docs.append(Doc(text=t, tokens=tokens))
+
+    yap_out = run_yap_joint(tok_sents)
+    ma_lattice = yap_out['ma_lattice']
+    md_lattice = yap_out['md_lattice']
+    dep_tree = yap_out['dep_tree']
+    if include_yap_outputs:
+        for doc, ma, md in zip(
+                                    docs, 
+                                    ma_lattice.split('\n\n'),
+                                    md_lattice.split('\n\n')
+                                    ):
+            doc.ma_lattice = ma
+            doc.md_lattice = md
+
+    model = loaded_models[morph_model_name]
+    temp_input = temporary_filename()
+    md_sents = get_md_sents(md_lattice, ['token_id', 'form', 'lemma', 'xpostag', 'feats'])
+    md_sents_for_yap = [[form for _, form, *_ in sent] for sent in md_sents]
+    nemo.write_tokens_file(md_sents_for_yap, temp_input, dummy_o=True)
+    morph_preds = ncrf_decode(model['model'], model['data'], temp_input)
+
+    tok_md_sents = get_token_morphs_list(md_sents)
+    tok_morph_preds = get_token_morphs_list([
+                                                    [(tid, p) for (tid, *_), p 
+                                                        in zip(md_sent, mor_preds)] 
+                                                    for md_sent, mor_preds 
+                                                    in zip(md_sents, morph_preds) ])
+    for doc, md, mora in zip(docs, tok_md_sents, tok_morph_preds):
+        for tok, tok_mor, tok_mora in zip(doc, md, mora):
+            morphs = [ Morpheme(form=form, lemma=lemma, pos=xpostag, feats=feats,
+                                 nemo_morph=pred) 
+                        for (_, form, lemma, xpostag, feats),(_, pred)
+                        in zip(tok_mor, tok_mora)]
+            tok.morphs = morphs
+
+    if verbose>=Verbosity.SYNTAX:
+        add_dep_info(docs, md_sents, dep_tree, include_yap_outputs)
+
+    return docs
 
 
 @app.post("/multi_align_hybrid",
          response_model=List[Doc],
-         summary="Use token-multi model for MD and NER labels",
+         summary="Use token-multi model for MD and morpheme NER labels",
          response_model_exclude_unset=True
         )
 def multi_align_hybrid(q: NEMOQuery,
@@ -449,7 +507,12 @@ def multi_align_hybrid(q: NEMOQuery,
     pruned_lattice = prune_lattice(ma_lattice, ner_multi_preds)
     md_lattice = run_yap_md(pruned_lattice) #TODO: this should be joint, but there is currently no joint on MA in yap api
     if include_yap_outputs:
-        for doc, ma, pr, md in zip(docs, ma_lattice.split('\n\n'), pruned_lattice.split('\n\n'), md_lattice.split('\n\n')):
+        for doc, ma, pr, md in zip(
+                                    docs, 
+                                    ma_lattice.split('\n\n'),
+                                    pruned_lattice.split('\n\n'), 
+                                    md_lattice.split('\n\n')
+                                    ):
             doc.ma_lattice = ma
             doc.pruned_lattice = pr
             doc.md_lattice = md
@@ -458,9 +521,11 @@ def multi_align_hybrid(q: NEMOQuery,
 
     md_sents = get_md_sents(md_lattice, ['token_id', 'form', 'lemma', 'xpostag', 'feats'])
     tok_md_sents = get_token_morphs_list(md_sents)
-    tok_morph_aligned_preds = get_token_morphs_list([[(tid, p) for (tid, *_), p 
+    tok_morph_aligned_preds = get_token_morphs_list([
+                                                    [(tid, p) for (tid, *_), p 
                                                         in zip(md_sent, mal_preds)] 
-                                                    for md_sent, mal_preds in zip(md_sents, morph_aligned_preds) ])
+                                                    for md_sent, mal_preds 
+                                                    in zip(md_sents, morph_aligned_preds) ])
     for doc, md, mora in zip(docs, tok_md_sents, tok_morph_aligned_preds):
         for tok, tok_mor, tok_mora in zip(doc, md, mora):
             morphs = [ Morpheme(form=form, lemma=lemma, pos=xpostag, feats=feats,
@@ -471,100 +536,104 @@ def multi_align_hybrid(q: NEMOQuery,
 
     if verbose>=Verbosity.SYNTAX:
         dep_tree = run_yap_dep(md_lattice)
-        dep_sents = get_dep_sents(dep_tree, ['id', 'head', 'deprel'])
-        dep_sents = [[(tid, *dep) for (tid, *_), dep in zip(md_sent, dep_sent)] 
-                    for md_sent, dep_sent in zip(md_sents, dep_sents)]
-        tok_dep_sents = get_token_morphs_list(dep_sents)
-        for doc, tds, dep in zip(docs, tok_dep_sents, dep_tree.split('\n\n')):
-            for tok, td in zip(doc, tds):
-                for morph, (_, id, head, deprel) in zip(tok, td):
-                    morph.id = id
-                    morph.head = head
-                    morph.deprel = deprel
-                    #morph.deps = deps
-            if include_yap_outputs:
-                doc.dep_tree = dep
-
+        add_dep_info(docs, md_sents, dep_tree, include_yap_outputs)
     
     return docs
-
-
-@app.post("/morph_yap",
-         response_model=List[MorphNERDoc],
-         summary="Standard pipeline - use yap for morpho-syntax, then use NER morph model for NER labels"
-        )
-def morph_yap(q: NEMOQuery,
-              morph_model_name: Optional[MorphModelName]=morph_model_query,
-              ):
-    if not q.sentences.strip():
-        return []
-    tok_sents = get_sents(q.sentences, q.tokenized)
-    yap_out = run_yap_joint(tok_sents)
-    md_sents = (bclm.get_sentences_list(bclm.read_lattices(StringIO(yap_out['md_lattice'])), ['form']).apply(lambda x: [t[0] for t in x] )).to_list()
-    model = loaded_models[morph_model_name]
-    temp_input = temporary_filename()
-    nemo.write_tokens_file(md_sents, temp_input, dummy_o=True)
-    morph_preds = ncrf_decode(model['model'], model['data'], temp_input)
-
-    response = []
-    for t, ma, md, dep, mf, mp in zip(tok_sents, yap_out['ma_lattice'].split('\n\n'),
-                                      yap_out['md_lattice'].split('\n\n'), yap_out['dep_tree'].split('\n\n'),
-                                      md_sents, morph_preds):
-        response.append( MorphNERDoc( tokenized_text=t,
-                                      ma_lattice=ma,
-                                      md_lattice=md,
-                                      dep_tree=dep,
-                                      morph_forms=mf,
-                                      morph_ncrf_preds=mp,
-                                    ))
-    return response
 
 
 flatten = lambda l: [item for sublist in l for item in sublist]
 
 
 @app.post("/morph_hybrid",
-         response_model=List[MorphHybridDoc] ,
-         summary="Segment using hybrid method (w/ token-multi). Then get NER labels with morph model.")
+         response_model=List[Doc] ,
+         summary="Segment using hybrid method (w/ token-multi). Then get NER labels with morph model.",
+         response_model_exclude_unset=True)
 def morph_hybrid(
                  q: NEMOQuery,
                  multi_model_name: Optional[MultiModelName]=multi_model_query,
                  morph_model_name: Optional[MorphModelName]=morph_model_query,
                  align_tokens: Optional[bool] = False,
-                 verbose: Optional[int]=0 
+                 verbose: Optional[Verbosity]=verbosity_query,
+                 include_yap_outputs: Optional[bool]=False
                  ):
     if not q.sentences.strip():
         return []
+    sents = q.sentences.split('\n')
     model_out = run_ner_model(q, multi_model_name)
     tok_sents, ner_multi_preds = zip(*[(x.tokenized_text, x.ncrf_preds) for x in model_out])
+    docs = []
+    for s, t in zip(tok_sents, sents):
+        tokens = [Token(text=t) for t in s]
+        docs.append(Doc(text=t, tokens=tokens))
 
+    if verbose>=Verbosity.INTERMID: 
+        mul_align_tok = [[fix_multi_biose(label) for label in sent] for sent in ner_multi_preds]
+        for doc, mul, mat in zip(docs, ner_multi_preds, mul_align_tok):
+            for tok, tok_mul, tok_mat in zip(doc, mul, mat):
+                tok.nemo_multi = tok_mul
+                tok.nemo_multi_align_token = tok_mat
+        
     ma_lattice = run_yap_hebma(tok_sents)
     pruned_lattice = prune_lattice(ma_lattice, ner_multi_preds)
     md_lattice = run_yap_md(pruned_lattice) #TODO: this should be joint, but there is currently no joint on MA in yap api
-    if verbose>=2:
-        dep_tree = run_yap_dep(md_lattice).split('\n\n')  # instead, we run yap as pipeline md->dep
-    else:
-        dep_tree = [None] * len(tok_sents)
-    if verbose>=1:
-        ner_single_preds = [[fix_multi_biose(label) for label in sent] for sent in ner_multi_preds]
-        morph_aligned_preds = align_multi_md(ner_multi_preds, md_lattice)
-    md_sents = (bclm.get_sentences_list(bclm.read_lattices(StringIO(md_lattice)), ['form']).apply(lambda x: [t[0] for t in x] )).to_list()
+    if include_yap_outputs:
+        for doc, ma, pr, md in zip(
+                                    docs, 
+                                    ma_lattice.split('\n\n'),
+                                    pruned_lattice.split('\n\n'), 
+                                    md_lattice.split('\n\n')
+                                    ):
+            doc.ma_lattice = ma
+            doc.pruned_lattice = pr
+            doc.md_lattice = md
+    
+    md_sents = get_md_sents(md_lattice, ['token_id', 'form', 'lemma', 'xpostag', 'feats'])
     model = loaded_models[morph_model_name]
     temp_input = temporary_filename()
-    nemo.write_tokens_file(md_sents, temp_input, dummy_o=True)
+    md_sents_for_ncrf = [[form for _, form, *_ in sent] for sent in md_sents]
+    nemo.write_tokens_file(md_sents_for_ncrf, temp_input, dummy_o=True)
     morph_preds = ncrf_decode(model['model'], model['data'], temp_input)
-    r = {
-            't': tok_sents,
-            'nm': ner_multi_preds,
-            'ns': ner_single_preds,
-            'ma': ma_lattice,
-            'pr': pruned_lattice,
-            'md': md_lattice,
-            'dep': dep_tree,
-            'mf': md_sents,
-            'al': morph_aligned_preds,
-            'mor': morph_preds,
-        } 
+
+    tok_md_sents = get_token_morphs_list(md_sents)
+    tok_morph_preds = get_token_morphs_list([
+                                                    [(tid, p) for (tid, *_), p 
+                                                        in zip(md_sent, mor_preds)] 
+                                                    for md_sent, mor_preds 
+                                                    in zip(md_sents, morph_preds) ])
+
+    if verbose>=Verbosity.INTERMID or align_tokens==False:
+        for doc, md in zip(docs, tok_md_sents):
+            for tok, tok_mor in zip(doc, md):
+                morphs = [ Morpheme(form=form, lemma=lemma, pos=xpostag, feats=feats) 
+                            for (_, form, lemma, xpostag, feats)
+                            in tok_mor]
+                tok.morphs = morphs
+
+        for doc, morp in zip(docs, tok_morph_preds):
+            for tok, tok_morp in zip(doc, morp):
+                for morph, (_, pred) in zip(tok, tok_morp):
+                    morph.nemo_morph = pred
+
+
+    if verbose>=Verbosity.INTERMID:
+        morph_aligned_preds = align_multi_md(ner_multi_preds, md_lattice)
+        tok_morph_aligned_preds = get_token_morphs_list([
+                                                        [(tid, p) for (tid, *_), p 
+                                                            in zip(md_sent, mal_preds)] 
+                                                        for md_sent, mal_preds 
+                                                        in zip(md_sents, morph_aligned_preds) ])
+        for doc, md, mora in zip(docs, tok_md_sents, tok_morph_aligned_preds):
+            for tok, tok_mor, tok_mora in zip(doc, md, mora):
+                morphs = [ Morpheme(form=form, lemma=lemma, pos=xpostag, feats=feats,
+                                    nemo_multi_align_morph=pred) 
+                            for (_, form, lemma, xpostag, feats),(_, pred)
+                            in zip(tok_mor, tok_mora)]
+                tok.morphs = morphs
+
+
+    if verbose>=Verbosity.SYNTAX:
+        dep_tree = run_yap_dep(md_lattice)
+        add_dep_info(docs, md_sents, dep_tree, include_yap_outputs)
     
     if align_tokens:
         md_sents_for_align = (bclm.get_sentences_list(bclm.read_lattices(StringIO(md_lattice)), ['token_id']).apply(lambda x: [t[0] for t in x] )).to_list()
@@ -573,36 +642,24 @@ def morph_hybrid(
         new_toks = _get_token_df(tok_aligned_df, fields=['biose'], token_fields=['sent_id', 'token_id'])
         new_toks['fixed_bio'] = new_toks.biose.apply(lambda x: nemo.get_fixed_bio_sequence(tuple(x.split('^'))))
         tok_aligned = (bclm.get_sentences_list(new_toks, ['fixed_bio']).apply(lambda x: [t[0] for t in x] )).to_list()
-        r['moral'] = tok_aligned
-    else: r['moral'] = [None, ]*len(r['t'])
-    
-    response = []
-    for t, nm, ns, ma, pr, md, dep, mf, al, mor, moral in zip(r['t'], r['nm'], r['ns'],
-                                             r['ma'].split('\n\n'), r['pr'].split('\n\n'), r['md'].split('\n\n'), r['dep'],
-                                             r['mf'], r['al'], r['mor'], r['moral']):
-        response.append( MorphHybridDoc( tokenized_text=t,
-                                    multi_ncrf_preds=nm,
-                                    multi_ncrf_preds_align_single=ns,
-                                    ma_lattice=ma,
-                                    pruned_lattice=pr,
-                                    md_lattice=md,
-                                    dep_tree=dep,
-                                    morph_forms=mf,
-                                    multi_ncrf_preds_align_morph=al,
-                                    morph_ncrf_preds=mor,
-                                    morph_ncrf_preds_align_tokens=moral,
-                                    ))
-    return response
+        for doc, tok_preds in zip(docs, tok_aligned):
+            for tok, tok_pred in zip(doc, tok_preds):
+                tok.nemo_morph_align_token = tok_pred
+    print (docs)
+    return docs
 
 
 @app.post("/morph_hybrid_align_tokens",
-         response_model=List[MorphHybridDoc] ,
-         summary="Segment using hybrid method (w/ token-multi). Then get NER labels with morph model + align with tokens to get token-level NER.")
+         response_model=List[Doc] ,
+         summary="Segment using hybrid method (w/ token-multi). Then get NER labels with morph model + align with tokens to get token-level NER.",
+         response_model_exclude_unset=True)
 def morph_hybrid_align_tokens(q: NEMOQuery,
                               multi_model_name: Optional[MultiModelName]=multi_model_query,
                               morph_model_name: Optional[MorphModelName]=morph_model_query,
-                              verbose: Optional[int]=0):
-    return morph_hybrid(q, multi_model_name, morph_model_name, align_tokens=True, verbose=verbose)
+                              verbose: Optional[Verbosity]=verbosity_query,
+                              include_yap_outputs: Optional[bool]=False):
+    return morph_hybrid(q, multi_model_name, morph_model_name, align_tokens=True, 
+                        verbose=verbose, include_yap_outputs=include_yap_outputs)
 
 
 #
