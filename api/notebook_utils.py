@@ -2,23 +2,76 @@ import iobes
 import pandas as pd
 from typing import Dict, Any, List, Optional, Union
 
-def to_dict(span):
+def to_dict(span, text):
     return {
+        'text': ' '.join(text[span[1]:span[2]]),
         'label': span[0],
         'start': span[1],
         'end': span[2]
     }
 
-def get_spans(docs, label_key, text_key):
+
+def iter_token_attrs(doc, attr):
+    for i, token in enumerate(doc['tokens']):
+        yield token[attr]
+
+
+def iter_morph_attrs(doc, attr):
+    for i, token in enumerate(doc['tokens']):
+        for morph in token['morphs']:
+            yield morph[attr]
+
+NEMO_FIELDS_TOKEN = ['nemo_single', 'nemo_multi_align_token', 'nemo_morph_align_token']
+NEMO_FIELDS_MORPH = ['nemo_morph', 'nemo_multi_align_morph']
+            
+def get_spans(docs):
     spans = []
     for i, doc in enumerate(docs):
-        labels = doc[label_key]
-        text = doc[text_key]
-        spans.append({
-                        'text': text,
-                        'ents': [to_dict(x) for x in iobes.parse_spans_iobes(labels)]
-                    })
+        try: 
+            morph_text = list(iter_morph_attrs(doc, 'form'))
+        except KeyError:
+            pass
+        for f in NEMO_FIELDS_MORPH:
+            try:
+                labels = list(iter_morph_attrs(doc, f))
+                spans.append({
+                                'level': 'morph',
+                                'scenario': f,
+                                'text': morph_text,
+                                'ents': [to_dict(x, morph_text) 
+                                         for x in iobes.parse_spans_iobes(labels)]
+                            })
+            except KeyError:
+                pass
+            
+        tok_text = list(iter_token_attrs(doc, 'text'))
+        for f in NEMO_FIELDS_TOKEN:
+            try:
+                labels = list(iter_token_attrs(doc, f))
+                spans.append({
+                                'level': 'token',
+                                'scenario': f,
+                                'text': tok_text,
+                                'ents': [to_dict(x, tok_text) 
+                                         for x in iobes.parse_spans_iobes(labels)]
+                            })
+            except KeyError:
+                pass
     return spans
+
+
+def spans_to_df(spans):
+    sc = []
+    for i, sent in enumerate(spans):
+        for ent in sent['ents']:
+            sc.append({
+                'sent_id': i,
+                'text': ent['text'],
+                'label': ent['label'],
+                'level': sent['level'],
+                'scenario': sent['scenario']
+            })
+    return pd.DataFrame(sc)
 
 def escape_html(text: str) -> str:
     """Replace <, >, &, " with their HTML encoded representation. Intended to
@@ -32,18 +85,6 @@ def escape_html(text: str) -> str:
     text = text.replace('"', "&quot;")
     return text
 
-def get_ents(docs, label_key, text_key):
-    ents = []
-    for i, doc in enumerate(docs):
-        labels = doc[label_key]
-        morphs = doc[text_key]
-        spans = iobes.parse_spans_iobes(labels)
-        for span in spans:
-            text = ' '.join(morphs[span.start:span.end])
-            ents.append({ 'sent_id': i+1, 
-                          'text': text, 
-                          'cat': span.type})
-    return pd.DataFrame(ents)
 
 DEFAULT_LANG = "he"
 DEFAULT_DIR = "rtl"
