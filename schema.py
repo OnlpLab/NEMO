@@ -76,6 +76,7 @@ class Token(BaseModel):
 
 class Doc(BaseModel):
     text: Optional[str] = None
+    ents: Optional[dict] = None
     tokens: List[Token]
     #morphs: Optional[List[Morpheme]] = [] # better? and add token_id to Morpheme
     ma_lattice: Optional[str] = None
@@ -89,13 +90,11 @@ class Doc(BaseModel):
     def __next__(self):
         return self.tokens.__next__()
 
-    @classmethod
     def iter_token_attrs(self, attr):
-        for i, token in enumerate(self):
+        for i, token in enumerate(self.tokens):
             yield i, getattr(token, attr)
 
-    @classmethod
     def iter_morph_attrs(self, attr):
-        for i, token in enumerate(self):
+        for i, token in enumerate(self.tokens):
             for morph in token:
                 yield i, getattr(morph, attr)

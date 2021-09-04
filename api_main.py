@@ -14,6 +14,7 @@ from enum import Enum
 from io import StringIO
 from operator import itemgetter
 from itertools import groupby
+import iobes
 
 os.environ['CUDA_VISIBLE_DEVICES'] = ''
 
@@ -347,6 +348,71 @@ def add_dep_info(docs, md_sents, dep_tree, include_yap_outputs):
             doc.dep_tree = dep
 
 
+def iter_token_attrs(doc, attr):
+    for token in doc:
+        yield getattr(token, attr)
+
+
+def iter_morph_attrs(doc, attr):
+    for token in doc:
+        for morph in token:
+            yield getattr(morph, attr)
+
+
+NEMO_FIELDS_TOKEN = ['nemo_single', 'nemo_multi_align_token', 'nemo_morph_align_token']
+NEMO_FIELDS_MORPH = ['nemo_morph', 'nemo_multi_align_morph']
+
+def to_dict(span, text):
+    return {
+        'text': ' '.join(text[span[1]:span[2]]),
+        'label': span[0],
+        'start': span[1],
+        'end': span[2]
+    }
+
+def get_spans(doc, token_fields=None, morph_fields=None, add_full_text=False):
+    spans = {}
+    if morph_fields:
+        try: 
+            morph_text = list(iter_morph_attrs(doc, 'form'))
+        except KeyError:
+            pass
+        morph_spans = []
+        for f in morph_fields:
+            try:
+                labels = list(iter_morph_attrs(doc, f))
+                span = {
+                            'scenario': f,
+                            'ents': [to_dict(x, morph_text) 
+                                        for x in iobes.parse_spans_iobes(labels)]
+                        }
+                if add_full_text:
+                    span['text'] = morph_text
+                morph_spans.append(span)
+            except KeyError:
+                pass
+        spans['morph'] = morph_spans
+    if token_fields:
+        tok_text = list(iter_token_attrs(doc, 'text'))
+        tok_spans = []
+        for f in token_fields:
+            try:
+                labels = list(iter_token_attrs(doc, f))
+                span = {
+                            'scenario': f,
+                            'ents': [to_dict(x, tok_text) 
+                                        for x in iobes.parse_spans_iobes(labels)]
+                        }
+                if add_full_text:
+                    span['text'] = tok_text
+                tok_spans.append(span)
+            except KeyError:
+                pass
+        spans['token'] = tok_spans
+      
+    return spans
+
+
 description = """
 NEMO API helps you do awesome stuff with Hebrew named entities and morphology 🐠
 
@@ -388,17 +454,6 @@ available_commands = ['run_ner_model', 'multi_align_hybrid', 'multi_to_single',
 
 
 #query objects for FastAPI documentation
-# sent_query = Query( None,
-#                     description="Hebrew sentences seprated by '\\n'",
-#                     example="עשרות אנשים מגיעים מתאילנד לישראל.\nתופעה זו התבררה אתמול בוועדת העבודה והרווחה של הכנסת.",
-#                   )
-
-
-# tokenized_query = Query( False,
-#                     description="Are sentences pre-tokenized? If so, we split each sentence by space char. Else, we use a built in tokenizer."
-#                   )
-
-
 multi_model_query = Query(MultiModelName.token_multi,
                           description="Name of an available toke-multi model.",
                   )
@@ -489,7 +544,9 @@ def multi_to_single(
         doc_set_token_attr(docs, 'nemo_multi', ner_multi_preds)
     
     doc_add_multi_align_tok(docs, ner_multi_preds)
-    
+
+    for doc in docs:
+        doc.ents = get_spans(doc, token_fields=['nemo_multi_align_token'], morph_fields=[])
     return docs
 
 
@@ -651,16 +708,4 @@ def morph_hybrid_align_tokens(q: NEMOQuery,
                               include_yap_outputs: Optional[bool]=False):
     return morph_hybrid(q, multi_model_name, morph_model_name, align_tokens=True, 
                         verbose=verbose, include_yap_outputs=include_yap_outputs)
-
-
-#
-# @app.post("/run_separate_nemo/")
-# def run_separate_nemo(command: str, model_name: str, sentence: str):
-#     if command in available_commands:
-#         if command == 'run_ner_model':
-#             with Temp('r', encoding='utf8') as temp_output:
-#                 nemo.run_ner_model(model_name, None, temp_output.name, text_input=sentence)
-#                 output_text = temp_output.read()
-#             return { 'nemo_output': output_text }
-#     else: 
-#         return {'error': 'command not supported'}
+                        
