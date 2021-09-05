@@ -15,8 +15,9 @@ from io import StringIO
 from operator import itemgetter
 from itertools import groupby
 import iobes
-from logging import ERROR
-iobes.LOGGER.setLevel(level=ERROR)
+if SUPPRESS_IOBES_WARNINGS:
+    from logging import ERROR
+    iobes.LOGGER.setLevel(level=ERROR)
 
 os.environ['CUDA_VISIBLE_DEVICES'] = ''
 
