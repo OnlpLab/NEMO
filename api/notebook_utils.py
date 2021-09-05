@@ -126,7 +126,7 @@ class EntityRenderer:
                 self.ent_template = TPL_ENT
 
     def render(
-        self, res: dict, level: str, scenario: str, page: bool = False, minify: bool = False
+        self, res: dict, level: str, scenario: str
     ) -> str:
         """Render complete markup.
         parsed (list): Dependency parses to render.
@@ -142,13 +142,8 @@ class EntityRenderer:
                 self.lang = settings.get("lang", DEFAULT_LANG)
             text = list(iter_token_attrs(p, 'text')) if level=='token' else list(iter_morph_attrs(p, 'form'))
             rendered.append(self.render_ents(text, p['ents'][level][scenario], p.get("title")))
-        if page:
-            docs = "".join([TPL_FIGURE.format(content=doc) for doc in rendered])
-            markup = TPL_PAGE.format(content=docs, lang=self.lang, dir=self.direction)
         else:
             markup = "".join(rendered)
-        if minify:
-            return minify_html(markup)
         return markup
 
     def render_ents(
