@@ -411,17 +411,28 @@ def get_spans(doc, token_fields=None, morph_fields=None):
 description = """
 NEMO API helps you do awesome stuff with Hebrew named entities and morphology 🐠
 
-* All endpoints are expect an HTTP POST request
-* Request body contains a JSON with Hebrew `sentences` and optional `tokenized` flag for signaling whether they are pre-tokenized or not.
-* Request URL may include further optional path parameters for choosing models/scenarios (in all but `run_ncrf_model` there is no need to touch these)
-* Results are in JSON form in HTTP response body
-* `verbose` parameter (more info &rarr; longer runtime):
-    - `0`: tokens, morphemes (if morph endpoint) and final requested nemo preds.
-        - morphological features included: `form`, `lemma`, `pos`, ', `feats`
-    - `1`: adds intermediate nemo preds 
-        - for example when running `morph_hybrid`, you also get NER preds `nemo_multi`, `nemo_multi_align_token`, `nemo_multi_align_morph`)
-    - `2` adds syntactic dependency tree features (SPMRL): `head', `deprel`
-* `include_yap_outputs` flag - adds yap raw output to each sentence
+* All endpoints expect an HTTP POST request:    
+    - Request body contains a JSON with Hebrew `sentences` and optional `tokenized` flag for signaling whether they are pre-tokenized or not
+    - Request URL may include further optional path parameters for choosing models/scenarios (in all but `run_ncrf_model` there is no need to touch these)
+    - `verbose` parameter (more info &rarr; longer runtime):
+        - `0`: tokens, morphemes (if morph endpoint) and final requested nemo preds
+        - `1`: adds intermediate nemo preds 
+            - for example when running `morph_hybrid`, you also get NER preds `nemo_multi`, `nemo_multi_align_token`, `nemo_multi_align_morph`
+        - `2` adds syntactic dependency tree features (SPMRL): `head', `deprel`
+    - `include_yap_outputs` flag - adds yap raw output to each sentence
+* Results are in JSON form in HTTP response body:
+    - The response is a list of `Doc` objects, one for each sentence in the input
+    - Each `Doc` contains: 
+        - Predicted entity spans in the `ents` attribute (organized by scenarios)
+        - `tokens` - a list of `Token` objects, each containing:
+            - `text` - the surface form of the token
+            - Predicted BIOSE labels for the requested scenarios: `nemo_multi` / `nemo_multi_align_token` / `nemo_morph_align_token` 
+            - `morphs` - a list of `Morpheme` objects, each containing:
+                - Surface `form` and other predicted morphological features: `lemma`, `pos`, `feats`
+                - Predicted BIOSE labels for the requested scenarios: `nemo_morph` / `nemo_multi_align_morph`
+                - If requested, predicted dependency syntax features: `head`, `deprel` 
+        - If requested, raw YAP outputs - `ma_lattice`, `pruned_lattice` (using the hybrid method), `md_lattice`, `dep_tree`
+
 
 API schema served at [openapi.json](openapi.json)
 
