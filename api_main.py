@@ -1,5 +1,5 @@
 import pandas as pd
-from typing import Optional, List
+from typing import Optional, List, Union
 from tempfile import mkstemp
 import atexit
 import os
@@ -81,15 +81,15 @@ def ncrf_decode(model, data, temp_input):
     
     
 def get_sents(text, tokenized):
+    if type(text) is list:
+        return text
     if not tokenized:
         sents = nemo.tokenize_text(text)
     else:
         sents = [sent.split(' ') for sent in text.split('\n')]
     return sents
     
-    
-def create_input_file(text, path, tokenized):
-    sents = get_sents(text, tokenized)
+def create_input_file(sents, path):
     nemo.write_tokens_file(sents, path, dummy_o=True)
     return sents
 
@@ -351,6 +351,16 @@ def add_dep_info(docs, md_sents, dep_tree, include_yap_outputs):
             doc.dep_tree = dep
 
 
+def morph_align_tokens(md_sents, morph_preds):
+        md_sents_for_align =  [[m[0] for m in sent] for sent in md_sents]# (bclm.get_sentences_list(bclm.read_lattices(StringIO(md_lattice)), ['token_id']).apply(lambda x: [t[0] for t in x] )).to_list()
+        tok_aligned_sents = flatten([[(sent_id, m, p) for (m,p) in zip(m_sent, p_sent)] for sent_id, (m_sent, p_sent) in enumerate(zip(md_sents_for_align, morph_preds))])
+        tok_aligned_df = pd.DataFrame(tok_aligned_sents, columns=['sent_id', 'token_id', 'biose'])
+        new_toks = _get_token_df(tok_aligned_df, fields=['biose'], token_fields=['sent_id', 'token_id'])
+        new_toks['fixed_bio'] = new_toks.biose.apply(lambda x: nemo.get_fixed_bio_sequence(tuple(x.split('^'))))
+        tok_aligned = (bclm.get_sentences_list(new_toks, ['fixed_bio']).apply(lambda x: [t[0] for t in x] )).to_list()
+        return tok_aligned
+
+
 def iter_token_attrs(doc, attr):
     for token in doc:
         yield getattr(token, attr)
@@ -421,7 +431,8 @@ NEMO API helps you do awesome stuff with Hebrew named entities and morphology ðŸ
         - `2` adds syntactic dependency tree features (SPMRL): `head', `deprel`
     - `include_yap_outputs` flag - adds yap raw output to each sentence
 * Results are in JSON form in HTTP response body:
-    - The response is a list of `Doc` objects, one for each sentence in the input
+    - The response of `run_ncrf_model` is a list `NCRFPreds` objects, each containing the tokenized text and the corresponding predicted BIOSE labels.    
+    - For all other endpoints, response is a list of `Doc` objects, one for each sentence in the input
     - Each `Doc` contains: 
         - Predicted entity spans in the `ents` attribute (organized by scenarios)
         - `tokens` - a list of `Token` objects, each containing:
@@ -476,7 +487,7 @@ verbosity_query = Query(Verbosity.BASIC,
 
 
 class NEMOQuery(BaseModel):
-    sentences: str
+    sentences: Union[str,List[List[str]]]
     tokenized: Optional[bool] = False
 
     class Config:
@@ -516,11 +527,12 @@ def load_all_models():
 def run_ncrf_model(q: NEMOQuery, 
                    model_name: Optional[ModelName]=ModelName.token_single,
                    ):
-    if not q.sentences.strip():
+    if type(q.sentences) is str and not q.sentences.strip():
         return []
     model = loaded_models[model_name]
     temp_input = temporary_filename()
-    tok_sents = create_input_file(q.sentences, temp_input, q.tokenized)
+    tok_sents = get_sents(q.sentences, q.tokenized)
+    create_input_file(tok_sents, temp_input)
     preds = ncrf_decode(model['model'], model['data'], temp_input)
     response = []
     for t, p in zip(tok_sents, preds):
@@ -581,12 +593,10 @@ def morph_yap(q: NEMOQuery,
     if include_yap_outputs:
         doc_add_yap_outputs(docs, ma_lattice = yap_out['ma_lattice'], md_lattice = md_lattice)
 
-    model = loaded_models[morph_model_name]
-    temp_input = temporary_filename()
     md_sents = get_md_sents(md_lattice, ['token_id', 'form', 'lemma', 'xpostag', 'feats'])
-    md_sents_for_yap = [[form for _, form, *_ in sent] for sent in md_sents]
-    nemo.write_tokens_file(md_sents_for_yap, temp_input, dummy_o=True)
-    morph_preds = ncrf_decode(model['model'], model['data'], temp_input)
+    md_sents_for_ncrf = [[form for _, form, *_ in sent] for sent in md_sents]
+    model_out = run_ncrf_model(NEMOQuery(sentences=md_sents_for_ncrf), morph_model_name)
+    _, morph_preds = zip(*[(x.tokenized_text, x.ncrf_preds) for x in model_out])
 
     tok_md_sents = get_token_morphs_list(md_sents)
     doc_init_morphs(docs, tok_md_sents)
@@ -687,12 +697,10 @@ def morph_hybrid(
         doc_add_yap_outputs(docs, ma_lattice, pruned_lattice, md_lattice)
     
     md_sents = get_md_sents(md_lattice, ['token_id', 'form', 'lemma', 'xpostag', 'feats'])
-    model = loaded_models[morph_model_name]
-    temp_input = temporary_filename()
     md_sents_for_ncrf = [[form for _, form, *_ in sent] for sent in md_sents]
-    nemo.write_tokens_file(md_sents_for_ncrf, temp_input, dummy_o=True)
-    morph_preds = ncrf_decode(model['model'], model['data'], temp_input)
-
+    model_out = run_ncrf_model(NEMOQuery(sentences=md_sents_for_ncrf), morph_model_name)
+    _, morph_preds = zip(*[(x.tokenized_text, x.ncrf_preds) for x in model_out])
+    
     if verbose>=Verbosity.INTERMID or align_tokens==False:
         tok_md_sents = get_token_morphs_list(md_sents)
         doc_init_morphs(docs, tok_md_sents)
@@ -710,15 +718,8 @@ def morph_hybrid(
         add_dep_info(docs, md_sents, dep_tree, include_yap_outputs)
     
     if align_tokens:
-        md_sents_for_align = (bclm.get_sentences_list(bclm.read_lattices(StringIO(md_lattice)), ['token_id']).apply(lambda x: [t[0] for t in x] )).to_list()
-        tok_aligned_sents = flatten([[(sent_id, m, p) for (m,p) in zip(m_sent, p_sent)] for sent_id, (m_sent, p_sent) in enumerate(zip(md_sents_for_align, morph_preds))])
-        tok_aligned_df = pd.DataFrame(tok_aligned_sents, columns=['sent_id', 'token_id', 'biose'])
-        new_toks = _get_token_df(tok_aligned_df, fields=['biose'], token_fields=['sent_id', 'token_id'])
-        new_toks['fixed_bio'] = new_toks.biose.apply(lambda x: nemo.get_fixed_bio_sequence(tuple(x.split('^'))))
-        tok_aligned = (bclm.get_sentences_list(new_toks, ['fixed_bio']).apply(lambda x: [t[0] for t in x] )).to_list()
-        for doc, tok_preds in zip(docs, tok_aligned):
-            for tok, tok_pred in zip(doc, tok_preds):
-                tok.nemo_morph_align_token = tok_pred
+        tok_aligned = morph_align_tokens(md_sents, morph_preds)
+        doc_set_token_attr(docs, 'nemo_morph_align_token', tok_aligned)
         nemo_token_fields.append('nemo_morph_align_token')
 
     for doc in docs:
