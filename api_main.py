@@ -362,6 +362,7 @@ def iter_morph_attrs(doc, attr):
 NEMO_FIELDS_TOKEN = ['nemo_single', 'nemo_multi_align_token', 'nemo_morph_align_token']
 NEMO_FIELDS_MORPH = ['nemo_morph', 'nemo_multi_align_morph']
 
+
 def to_dict(span, text):
     return {
         'text': ' '.join(text[span[1]:span[2]]),
@@ -370,47 +371,38 @@ def to_dict(span, text):
         'end': span[2]
     }
 
-def get_spans(doc, token_fields=None, morph_fields=None, add_full_text=False):
-    spans = {}
+
+def get_spans(doc, token_fields=None, morph_fields=None):
+    all_spans = {}
     if morph_fields:
         try: 
             morph_text = list(iter_morph_attrs(doc, 'form'))
         except KeyError:
             pass
-        morph_spans = []
+        morph_spans = {}
         for f in morph_fields:
             try:
                 labels = list(iter_morph_attrs(doc, f))
-                span = {
-                            'scenario': f,
-                            'ents': [to_dict(x, morph_text) 
-                                        for x in iobes.parse_spans_iobes(labels)]
-                        }
-                if add_full_text:
-                    span['text'] = morph_text
-                morph_spans.append(span)
+                spans = [to_dict(x, morph_text) 
+                        for x in iobes.parse_spans_iobes(labels)]
+                morph_spans[f] = spans
             except KeyError:
                 pass
-        spans['morph'] = morph_spans
+        all_spans['morph'] = morph_spans
     if token_fields:
         tok_text = list(iter_token_attrs(doc, 'text'))
-        tok_spans = []
+        tok_spans = {}
         for f in token_fields:
             try:
                 labels = list(iter_token_attrs(doc, f))
-                span = {
-                            'scenario': f,
-                            'ents': [to_dict(x, tok_text) 
-                                        for x in iobes.parse_spans_iobes(labels)]
-                        }
-                if add_full_text:
-                    span['text'] = tok_text
-                tok_spans.append(span)
+                spans = [to_dict(x, tok_text) 
+                        for x in iobes.parse_spans_iobes(labels)]
+                tok_spans[f] = spans
             except KeyError:
                 pass
-        spans['token'] = tok_spans
+        all_spans['token'] = tok_spans
       
-    return spans
+    return all_spans
 
 
 description = """
@@ -418,7 +410,7 @@ NEMO API helps you do awesome stuff with Hebrew named entities and morphology ðŸ
 
 * All endpoints are expect an HTTP POST request
 * Request body contains a JSON with Hebrew `sentences` and optional `tokenized` flag for signaling whether they are pre-tokenized or not.
-* Request URL may include further optional path parameters for choosing models/scenarios (in all but `run_ner_model` there is no need to touch these)
+* Request URL may include further optional path parameters for choosing models/scenarios (in all but `run_ncrf_model` there is no need to touch these)
 * Results are in JSON form in HTTP response body
 * `verbose` parameter (more info &rarr; longer runtime):
     - `0`: tokens, morphemes (if morph endpoint) and final requested nemo preds.
@@ -449,7 +441,7 @@ app = FastAPI(
 )
 
 
-available_commands = ['run_ner_model', 'multi_align_hybrid', 'multi_to_single',
+available_commands = ['run_ncrf_model', 'multi_align_hybrid', 'multi_to_single',
                       'morph_yap', 'morph_hybrid', 'morph_hybrid_align_tokens']
 
 
@@ -502,12 +494,12 @@ def load_all_models():
         loaded_models[model] = m
 
 
-@app.post("/run_ner_model",
+@app.post("/run_ncrf_model",
          response_model=List[NCRFPreds],
          summary="Get NER sequence label predictions, no morphological segmentation",
          response_model_exclude_unset=True
         )
-def run_ner_model(q: NEMOQuery, 
+def run_ncrf_model(q: NEMOQuery, 
                    model_name: Optional[ModelName]=ModelName.token_single,
                    ):
     if not q.sentences.strip():
@@ -535,18 +527,19 @@ def multi_to_single(
     if not q.sentences.strip():
         return []
     sents = q.sentences.split('\n')
-
-    model_out = run_ner_model(q, multi_model_name)
+    nemo_token_fields = ['nemo_multi_align_token']
+    model_out = run_ncrf_model(q, multi_model_name)
     tok_sents, ner_multi_preds = zip(*[(x.tokenized_text, x.ncrf_preds) for x in model_out])
     docs = docs_init_tokens(tok_sents, sents)
 
     if verbose>=Verbosity.INTERMID:
         doc_set_token_attr(docs, 'nemo_multi', ner_multi_preds)
+        nemo_token_fields.append('nemo_multi')
     
     doc_add_multi_align_tok(docs, ner_multi_preds)
 
     for doc in docs:
-        doc.ents = get_spans(doc, token_fields=['nemo_multi_align_token'], morph_fields=[])
+        doc.ents = get_spans(doc, token_fields=nemo_token_fields)
     return docs
 
 
@@ -561,6 +554,9 @@ def morph_yap(q: NEMOQuery,
               include_yap_outputs: Optional[bool]=False):
     if not q.sentences.strip():
         return []
+    
+    nemo_morph_fields = ['nemo_morph']
+
     sents = q.sentences.split('\n')
     tok_sents = get_sents(q.sentences, q.tokenized)
     docs = docs_init_tokens(tok_sents, sents)
@@ -585,7 +581,8 @@ def morph_yap(q: NEMOQuery,
 
     if verbose>=Verbosity.SYNTAX:
         add_dep_info(docs, md_sents, dep_tree, include_yap_outputs)
-
+    for doc in docs:
+        doc.ents = get_spans(doc, morph_fields=nemo_morph_fields)
     return docs
 
 
@@ -600,14 +597,20 @@ def multi_align_hybrid(q: NEMOQuery,
                        include_yap_outputs: Optional[bool]=False):
     if not q.sentences.strip():
         return []
+        
+    nemo_morph_fields = ['nemo_multi_align_morph']
+    nemo_token_fields = []
+
     sents = q.sentences.split('\n')
-    model_out = run_ner_model(q, multi_model_name)
+    model_out = run_ncrf_model(q, multi_model_name)
     tok_sents, ner_multi_preds = zip(*[(x.tokenized_text, x.ncrf_preds) for x in model_out])
     docs = docs_init_tokens(tok_sents, sents)
 
     if verbose>=Verbosity.INTERMID:
         doc_set_token_attr(docs, 'nemo_multi', ner_multi_preds)
         doc_add_multi_align_tok(docs, ner_multi_preds)
+        nemo_token_fields.append('nemo_multi_align_token')
+
         
     ma_lattice, pruned_lattice, md_lattice = hybrid_md(tok_sents, ner_multi_preds)
     if include_yap_outputs:
@@ -625,7 +628,10 @@ def multi_align_hybrid(q: NEMOQuery,
     if verbose>=Verbosity.SYNTAX:
         dep_tree = run_yap_dep(md_lattice)
         add_dep_info(docs, md_sents, dep_tree, include_yap_outputs)
-    
+
+    for doc in docs:
+        doc.ents = get_spans(doc, morph_fields=nemo_morph_fields, token_fields=nemo_token_fields)
+
     return docs
 
 
@@ -646,8 +652,11 @@ def morph_hybrid(
                  ):
     if not q.sentences.strip():
         return []
+    nemo_morph_fields = []
+    nemo_token_fields = []
+
     sents = q.sentences.split('\n')
-    model_out = run_ner_model(q, multi_model_name)
+    model_out = run_ncrf_model(q, multi_model_name)
     tok_sents, ner_multi_preds = zip(*[(x.tokenized_text, x.ncrf_preds) for x in model_out])
     docs = []
     for s, t in zip(tok_sents, sents):
@@ -657,7 +666,8 @@ def morph_hybrid(
     if verbose>=Verbosity.INTERMID:
         doc_set_token_attr(docs, 'nemo_multi', ner_multi_preds)
         doc_add_multi_align_tok(docs, ner_multi_preds)
-        
+        nemo_token_fields.append('nemo_multi_align_token')
+
     ma_lattice, pruned_lattice, md_lattice = hybrid_md(tok_sents, ner_multi_preds)
     if include_yap_outputs:
         doc_add_yap_outputs(docs, ma_lattice, pruned_lattice, md_lattice)
@@ -674,12 +684,13 @@ def morph_hybrid(
         doc_init_morphs(docs, tok_md_sents)
         tok_morph_preds = align_token_morph_list(md_sents, morph_preds)
         doc_set_morph_attr(docs, 'nemo_morph', tok_morph_preds)
+        nemo_morph_fields.append('nemo_morph')
 
     if verbose>=Verbosity.INTERMID:
         morph_aligned_preds = align_multi_md(ner_multi_preds, md_lattice)
         tok_morph_aligned_preds = align_token_morph_list(md_sents, morph_aligned_preds)
         doc_set_morph_attr(docs, 'nemo_multi_align_morph', tok_morph_aligned_preds)
-
+        nemo_morph_fields.append('nemo_multi_align_morph')
     if verbose>=Verbosity.SYNTAX:
         dep_tree = run_yap_dep(md_lattice)
         add_dep_info(docs, md_sents, dep_tree, include_yap_outputs)
@@ -694,6 +705,11 @@ def morph_hybrid(
         for doc, tok_preds in zip(docs, tok_aligned):
             for tok, tok_pred in zip(doc, tok_preds):
                 tok.nemo_morph_align_token = tok_pred
+        nemo_token_fields.append('nemo_morph_align_token')
+
+    for doc in docs:
+        doc.ents = get_spans(doc, morph_fields=nemo_morph_fields, token_fields=nemo_token_fields)
+
     return docs
 
 
