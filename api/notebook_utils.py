@@ -21,56 +21,20 @@ def iter_morph_attrs(doc, attr):
         for morph in token['morphs']:
             yield morph[attr]
 
-NEMO_FIELDS_TOKEN = ['nemo_single', 'nemo_multi_align_token', 'nemo_morph_align_token']
-NEMO_FIELDS_MORPH = ['nemo_morph', 'nemo_multi_align_morph']
-            
-def get_spans(docs):
-    spans = []
-    for i, doc in enumerate(docs):
-        try: 
-            morph_text = list(iter_morph_attrs(doc, 'form'))
-        except KeyError:
-            pass
-        for f in NEMO_FIELDS_MORPH:
-            try:
-                labels = list(iter_morph_attrs(doc, f))
-                spans.append({
-                                'level': 'morph',
-                                'scenario': f,
-                                'text': morph_text,
-                                'ents': [to_dict(x, morph_text) 
-                                         for x in iobes.parse_spans_iobes(labels)]
-                            })
-            except KeyError:
-                pass
-            
-        tok_text = list(iter_token_attrs(doc, 'text'))
-        for f in NEMO_FIELDS_TOKEN:
-            try:
-                labels = list(iter_token_attrs(doc, f))
-                spans.append({
-                                'level': 'token',
-                                'scenario': f,
-                                'text': tok_text,
-                                'ents': [to_dict(x, tok_text) 
-                                         for x in iobes.parse_spans_iobes(labels)]
-                            })
-            except KeyError:
-                pass
-    return spans
 
-
-def spans_to_df(spans):
+def ents_to_df(docs):
     sc = []
-    for i, sent in enumerate(spans):
-        for ent in sent['ents']:
-            sc.append({
-                'sent_id': i,
-                'text': ent['text'],
-                'label': ent['label'],
-                'level': sent['level'],
-                'scenario': sent['scenario']
-            })
+    for i, doc in enumerate(docs):
+        for level, scenarios in doc['ents'].items():
+            for scenario, ents in scenarios.items():
+                for ent in ents: 
+                    sc.append({
+                        'sent_id': i,
+                        'text': ent['text'],
+                        'label': ent['label'],
+                        'level': level,
+                        'scenario': scenario
+                    })
     return pd.DataFrame(sc)
 
 def escape_html(text: str) -> str:
@@ -162,7 +126,7 @@ class EntityRenderer:
                 self.ent_template = TPL_ENT
 
     def render(
-        self, parsed: List[Dict[str, Any]], page: bool = False, minify: bool = False
+        self, res: dict, level: str, scenario: str, page: bool = False, minify: bool = False
     ) -> str:
         """Render complete markup.
         parsed (list): Dependency parses to render.
@@ -171,12 +135,13 @@ class EntityRenderer:
         RETURNS (str): Rendered HTML markup.
         """
         rendered = []
-        for i, p in enumerate(parsed):
+        for i, p in enumerate(res):
             if i == 0:
                 settings = p.get("settings", {})
                 self.direction = settings.get("direction", DEFAULT_DIR)
                 self.lang = settings.get("lang", DEFAULT_LANG)
-            rendered.append(self.render_ents(p["text"], p["ents"], p.get("title")))
+            text = list(iter_token_attrs(p, 'text')) if level=='token' else list(iter_morph_attrs(p, 'form'))
+            rendered.append(self.render_ents(text, p['ents'][level][scenario], p.get("title")))
         if page:
             docs = "".join([TPL_FIGURE.format(content=doc) for doc in rendered])
             markup = TPL_PAGE.format(content=docs, lang=self.lang, dir=self.direction)
