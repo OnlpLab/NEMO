@@ -30,4 +30,4 @@ YAP_API_HEADERS = {'content-type': 'application/json'}
 
 MAX_THREADS_FASTAPI = 5
 
-SUPPRESS_IOBES_WARNINGS = False
+SUPPRESS_IOBES_WARNINGS = True
