@@ -2,23 +2,40 @@ import iobes
 import pandas as pd
 from typing import Dict, Any, List, Optional, Union
 
-def to_dict(span):
+def to_dict(span, text):
     return {
+        'text': ' '.join(text[span[1]:span[2]]),
         'label': span[0],
         'start': span[1],
         'end': span[2]
     }
 
-def get_spans(docs, label_key, text_key):
-    spans = []
+
+def iter_token_attrs(doc, attr):
+    for i, token in enumerate(doc['tokens']):
+        yield token[attr]
+
+
+def iter_morph_attrs(doc, attr):
+    for i, token in enumerate(doc['tokens']):
+        for morph in token['morphs']:
+            yield morph[attr]
+
+
+def ents_to_df(docs):
+    sc = []
     for i, doc in enumerate(docs):
-        labels = doc[label_key]
-        text = doc[text_key]
-        spans.append({
-                        'text': text,
-                        'ents': [to_dict(x) for x in iobes.parse_spans_iobes(labels)]
+        for level, scenarios in doc['ents'].items():
+            for scenario, ents in scenarios.items():
+                for ent in ents: 
+                    sc.append({
+                        'sent_id': i,
+                        'text': ent['text'],
+                        'label': ent['label'],
+                        'level': level,
+                        'scenario': scenario
                     })
-    return spans
+    return pd.DataFrame(sc)
 
 def escape_html(text: str) -> str:
     """Replace <, >, &, " with their HTML encoded representation. Intended to
@@ -32,18 +49,6 @@ def escape_html(text: str) -> str:
     text = text.replace('"', "&quot;")
     return text
 
-def get_ents(docs, label_key, text_key):
-    ents = []
-    for i, doc in enumerate(docs):
-        labels = doc[label_key]
-        morphs = doc[text_key]
-        spans = iobes.parse_spans_iobes(labels)
-        for span in spans:
-            text = ' '.join(morphs[span.start:span.end])
-            ents.append({ 'sent_id': i+1, 
-                          'text': text, 
-                          'cat': span.type})
-    return pd.DataFrame(ents)
 
 DEFAULT_LANG = "he"
 DEFAULT_DIR = "rtl"
@@ -121,7 +126,7 @@ class EntityRenderer:
                 self.ent_template = TPL_ENT
 
     def render(
-        self, parsed: List[Dict[str, Any]], page: bool = False, minify: bool = False
+        self, res: dict, level: str, scenario: str
     ) -> str:
         """Render complete markup.
         parsed (list): Dependency parses to render.
@@ -130,19 +135,15 @@ class EntityRenderer:
         RETURNS (str): Rendered HTML markup.
         """
         rendered = []
-        for i, p in enumerate(parsed):
+        for i, p in enumerate(res):
             if i == 0:
                 settings = p.get("settings", {})
                 self.direction = settings.get("direction", DEFAULT_DIR)
                 self.lang = settings.get("lang", DEFAULT_LANG)
-            rendered.append(self.render_ents(p["text"], p["ents"], p.get("title")))
-        if page:
-            docs = "".join([TPL_FIGURE.format(content=doc) for doc in rendered])
-            markup = TPL_PAGE.format(content=docs, lang=self.lang, dir=self.direction)
+            text = list(iter_token_attrs(p, 'text')) if level=='token' else list(iter_morph_attrs(p, 'form'))
+            rendered.append(self.render_ents(text, p['ents'][level][scenario], p.get("title")))
         else:
             markup = "".join(rendered)
-        if minify:
-            return minify_html(markup)
         return markup
 
     def render_ents(
