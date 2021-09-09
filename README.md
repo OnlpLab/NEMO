@@ -106,7 +106,7 @@ Finally, to get our desired output (tokens/morphemes), we can choose between dif
 |<img src="./docs/token_single.png" alt="Run token-single" width="175" /> |  <img src="./docs/multi_to_single.png" alt="Map token-multi to token-single" width="345" /> | <img src="./docs/morph_align_tokens.png" alt="Align morph NER with Tokens" width="345" /> |
 |`run_ner_model token-single` | `multi_to_single` | `morph_hybrid_align_tokens` |
 
-* Note: while the `morph_hybrid*` scenarios offer the best performance, they are less efficient since they requires running both `morph` and `token-multi` NER models.
+* Note: while the `morph_hybrid*` scenarios offer the best performance, they are slightly less efficient since they requires running both `morph` and `token-multi` NER models (yap calls take up most of the runtime anyway, so this is not extremely significant).
 
 
 ## Important Notes
