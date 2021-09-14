@@ -18,7 +18,7 @@ Table of Contents
 
 
 ## Introduction
-Code and models for neural modeling of Hebrew NER. Described in the TACL paper ["*Neural Modeling for Named Entities and Morphology (NEMO<sup>2</sup>)"*](https://arxiv.org/abs/2007.15620) along with extensive experiments on the different modeling scenarios provided in this repository.
+Code and models for neural modeling of Hebrew NER. Described in the TACL paper ["*Neural Modeling for Named Entities and Morphology (NEMO<sup>2</sup>)"*](https://direct.mit.edu/tacl/article/doi/10.1162/tacl_a_00404/107206/Neural-Modeling-for-Named-Entities-and-Morphology) along with extensive experiments on the different modeling scenarios provided in this repository.
 
 
 ## Main Features
@@ -106,7 +106,7 @@ Finally, to get our desired output (tokens/morphemes), we can choose between dif
 |<img src="./docs/token_single.png" alt="Run token-single" width="175" /> |  <img src="./docs/multi_to_single.png" alt="Map token-multi to token-single" width="345" /> | <img src="./docs/morph_align_tokens.png" alt="Align morph NER with Tokens" width="345" /> |
 |`run_ner_model token-single` | `multi_to_single` | `morph_hybrid_align_tokens` |
 
-* Note: while the `morph_hybrid*` scenarios offer the best performance, they are less efficient since they requires running both `morph` and `token-multi` NER models.
+* Note: while the `morph_hybrid*` scenarios offer the best performance, they are slightly less efficient since they requires running both `morph` and `token-multi` NER models (yap calls take up most of the runtime anyway, so this is not extremely significant).
 
 
 ## Important Notes
@@ -155,19 +155,19 @@ In our NEMO<sup>2</sup> paper we also evaluate our models on the [Ben-Mordecai H
 
 If you use any of the NEMO<sup>2</sup> code, models, embeddings or the NEMO corpus, please cite the NEMO<sup>2</sup> paper:
 ```bibtex
-@article{DBLP:journals/corr/abs-2007-15620,
-  author    = {Dan Bareket and
-               Reut Tsarfaty},
-  title     = {Neural Modeling for Named Entities and Morphology (NEMO{\^{}}2)},
-  journal   = {CoRR},
-  volume    = {abs/2007.15620},
-  year      = {2020},
-  url       = {https://arxiv.org/abs/2007.15620},
-  archivePrefix = {arXiv},
-  eprint    = {2007.15620},
-  timestamp = {Mon, 03 Aug 2020 14:32:13 +0200},
-  biburl    = {https://dblp.org/rec/journals/corr/abs-2007-15620.bib},
-  bibsource = {dblp computer science bibliography, https://dblp.org}
+@article{10.1162/tacl_a_00404,
+    author = {Bareket, Dan and Tsarfaty, Reut},
+    title = "{Neural Modeling for Named Entities and Morphology (NEMO2)}",
+    journal = {Transactions of the Association for Computational Linguistics},
+    volume = {9},
+    pages = {909-928},
+    year = {2021},
+    month = {09},
+    abstract = "{Named Entity Recognition (NER) is a fundamental NLP task, commonly formulated as classification over a sequence of tokens. Morphologically rich languages (MRLs) pose a challenge to this basic formulation, as the boundaries of named entities do not necessarily coincide with token boundaries, rather, they respect morphological boundaries. To address NER in MRLs we then need to answer two fundamental questions, namely, what are the basic units to be labeled, and how can these units be detected and classified in realistic settings (i.e., where no gold morphology is available). We empirically investigate these questions on a novel NER benchmark, with parallel token- level and morpheme-level NER annotations, which we develop for Modern Hebrew, a morphologically rich-and-ambiguous language. Our results show that explicitly modeling morphological boundaries leads to improved NER performance, and that a novel hybrid architecture, in which NER precedes and prunes morphological decomposition, greatly outperforms the standard pipeline, where morphological decomposition strictly precedes NER, setting a new performance bar for both Hebrew NER and Hebrew morphological decomposition tasks.}",
+    issn = {2307-387X},
+    doi = {10.1162/tacl_a_00404},
+    url = {https://doi.org/10.1162/tacl\_a\_00404},
+    eprint = {https://direct.mit.edu/tacl/article-pdf/doi/10.1162/tacl\_a\_00404/1962472/tacl\_a\_00404.pdf},
 }
 ```
 

@@ -454,7 +454,7 @@ Have fun and use responsibly 😊
 app = FastAPI(
     title="NEMO",
     description=description,
-    version="0.1.0",
+    version="0.2.0",
     terms_of_service="https://github.com/OnlpLab/NEMO",
     contact={
         "name": "Dan Bareket",
