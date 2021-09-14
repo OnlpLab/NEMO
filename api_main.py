@@ -352,8 +352,9 @@ def add_dep_info(docs, md_sents, dep_tree, include_yap_outputs):
 
 
 def morph_align_tokens(md_sents, morph_preds):
-        md_sents_for_align =  [[m[0] for m in sent] for sent in md_sents]# (bclm.get_sentences_list(bclm.read_lattices(StringIO(md_lattice)), ['token_id']).apply(lambda x: [t[0] for t in x] )).to_list()
-        tok_aligned_sents = flatten([[(sent_id, m, p) for (m,p) in zip(m_sent, p_sent)] for sent_id, (m_sent, p_sent) in enumerate(zip(md_sents_for_align, morph_preds))])
+        md_sents_for_align =  [[m[0] for m in sent] for sent in md_sents]
+        tok_aligned_sents = flatten([[(sent_id, m, p) for (m,p) in zip(m_sent, p_sent)] 
+                                    for sent_id, (m_sent, p_sent) in enumerate(zip(md_sents_for_align, morph_preds))])
         tok_aligned_df = pd.DataFrame(tok_aligned_sents, columns=['sent_id', 'token_id', 'biose'])
         new_toks = _get_token_df(tok_aligned_df, fields=['biose'], token_fields=['sent_id', 'token_id'])
         new_toks['fixed_bio'] = new_toks.biose.apply(lambda x: nemo.get_fixed_bio_sequence(tuple(x.split('^'))))
