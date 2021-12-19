@@ -3,6 +3,9 @@ from typing import Optional, List, Union
 from tempfile import mkstemp
 import atexit
 import os
+
+import uvicorn
+
 from config import *
 import nemo
 import requests
@@ -740,4 +743,7 @@ def morph_hybrid_align_tokens(q: NEMOQuery,
                               include_yap_outputs: Optional[bool]=False):
     return morph_hybrid(q, multi_model_name, morph_model_name, align_tokens=True, 
                         verbose=verbose, include_yap_outputs=include_yap_outputs)
-                        
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8090)
