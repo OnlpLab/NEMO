@@ -429,7 +429,7 @@ NEMO API helps you do awesome stuff with Hebrew named entities and morphology ðŸ
         - `0`: tokens, morphemes (if morph endpoint) and final requested nemo preds
         - `1`: adds intermediate nemo preds 
             - for example when running `morph_hybrid`, you also get NER preds `nemo_multi`, `nemo_multi_align_token`, `nemo_multi_align_morph`
-        - `2` adds syntactic dependency tree features (SPMRL): `head', `deprel`
+        - `2` adds syntactic dependency tree features (in SPMRL scheme): `head`, `deprel`
     - `include_yap_outputs` flag - adds yap raw output to each sentence
 * Results are in JSON form in HTTP response body:
     - The response of `run_ncrf_model` is a list `NCRFPreds` objects, each containing the tokenized text and the corresponding predicted BIOSE labels.    
