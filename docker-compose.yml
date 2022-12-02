@@ -12,12 +12,19 @@ services:
       - YAP_API_HOST=yap
       - YAP_API_PORT=8000
     depends_on:
-      - yap
+      yap:
+        condition: service_healthy
+
   yap:
     image: cjer/yap
     build: ./yap_docker
     working_dir: /yap/src/yap
     command: ./yap api
+    healthcheck:
+        test: ["CMD", "curl", "-s", "-X" ,"GET", "-H", "'Content-Type: application/json'", "-d'{\"text\": \"גנן גידל דגן בגן  \"}'", "localhost:8000/yap/heb/joint"]
+        interval: 30s
+        timeout: 10s
+        retries: 10
 # add this if you want yap available externally as well
 #    ports: 
 #      - "8000:8000"
